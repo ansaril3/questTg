@@ -1,4 +1,7 @@
 # Обработка инвентаря
+from config import bot, chapters  # Импортируем bot из config.py
+from utils.state_manager import load_state
+from handlers.game_handler import send_options_keyboard
 
 # Просмотр инвентаря (с золотыми монетами)
 @bot.message_handler(func=lambda message: message.text == "🎒 Инвентарь")

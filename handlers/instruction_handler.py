@@ -1,8 +1,8 @@
 # Обработка инструкций
 
-from config import bot, instructions, first_instruction
+from config import bot, instructions, first_instruction, chapters
 from utils.state_manager import load_state, save_state
-from game_handler import send_chapter
+from handlers.game_handler import send_chapter
 import telebot.types as types
 
 # Отправка раздела инструкции

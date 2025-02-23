@@ -1,9 +1,10 @@
 # Обработка глав и состояния игры
 
-from config import bot, chapters
-from utils.state_manager import load_state, save_state
+from config import bot, chapters, first_chapter  
+from utils.state_manager import load_state, save_state, SAVES_LIMIT
 from utils.helpers import check_condition, calculate_characteristic
 import telebot.types as types
+from collections import deque
 
 # Команда /start (начало игры)
 @bot.message_handler(commands=['start'])

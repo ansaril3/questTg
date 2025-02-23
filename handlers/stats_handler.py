@@ -1,6 +1,6 @@
 # Обработка характеристик
 
-from config import bot
+from config import bot, chapters
 from utils.state_manager import load_state
 from handlers.game_handler import send_options_keyboard
 
