@@ -1,5 +1,7 @@
 import json
 import os
+import datetime
+from collections import deque
 from telebot import TeleBot, types
 from dotenv import load_dotenv
 
@@ -9,67 +11,65 @@ TOKEN = os.getenv('TOKEN')
 
 bot = TeleBot(TOKEN)
 
-# Путь к файлам
+# Пути к файлам
 CHAPTERS_FILE = 'chapters.json'
 SAVES_DIR = 'saves'
+INSTRUCTIONS_FILE = 'instructions.json'
+SAVES_LIMIT = 10  # Храним последние 10 сохранений
 
 if not os.path.exists(SAVES_DIR):
     os.makedirs(SAVES_DIR)
 
 # Загрузка книги
-def load_chapters():
-    with open(CHAPTERS_FILE, 'r', encoding='utf-8') as file:
-        return json.load(file)
+def load_json(file_path):
+    if os.path.exists(file_path):
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return json.load(file)
+    return {}
 
-chapters = load_chapters()
+chapters = load_json(CHAPTERS_FILE)
+instructions = load_json(INSTRUCTIONS_FILE)
+
+# Определение первой главы
+first_chapter = list(chapters.keys())[0]
 
 # Загрузка состояния игрока
 def load_state(user_id):
     save_file = f"{SAVES_DIR}/{user_id}.json"
     if os.path.exists(save_file):
         with open(save_file, 'r', encoding='utf-8') as file:
-            return json.load(file)
-    else:
-        return {"chapter": 1, "health": 100, "inventory": [], "map": [[0]*5 for _ in range(5)], "position": [2, 2]}
+            state = json.load(file)
+            state["saves"] = deque(state.get("saves", []), maxlen=SAVES_LIMIT)  # Преобразуем список обратно в deque
+            return state
+    return {"chapter": first_chapter, "health": 100, "in_menu": False, "saves": deque([], maxlen=SAVES_LIMIT)}
 
 # Сохранение состояния игрока
 def save_state(user_id, state):
     save_file = f"{SAVES_DIR}/{user_id}.json"
+    state_copy = state.copy()
+    state_copy["saves"] = list(state_copy["saves"])  # Преобразуем deque в список перед сохранением
     with open(save_file, 'w', encoding='utf-8') as file:
-        json.dump(state, file)
+        json.dump(state_copy, file, ensure_ascii=False, indent=4)
 
 # Старт игры
 @bot.message_handler(commands=['start'])
 def start_game(message):
     user_id = message.chat.id
-    state = {"chapter": 1, "health": 100, "inventory": [], "map": [[0]*5 for _ in range(5)], "position": [2, 2]}
+    state = {"chapter": first_chapter, "health": 100, "in_menu": False, "saves": deque([], maxlen=SAVES_LIMIT)}
     save_state(user_id, state)
     send_chapter(user_id)
 
 # Отправка текущей главы
 def send_chapter(chat_id):
     state = load_state(chat_id)
-    chapter_num = state["chapter"]
-    chapter = chapters[str(chapter_num)]
+    chapter_key = state["chapter"]
+    chapter = chapters.get(chapter_key, None)
     
-    # Обновляем карту
-    position = chapter["map"]
-    state["map"][position[0]][position[1]] = 1
-    state["position"] = position
-    save_state(chat_id, state)
+    if not chapter:
+        bot.send_message(chat_id, "Ошибка: глава не найдена.")
+        return
     
-    # Добавление предметов в инвентарь
-    if "items" in chapter:
-        state["inventory"].extend(chapter["items"])
-        bot.send_message(chat_id, f"Вы нашли: {', '.join(chapter['items'])}")
-        save_state(chat_id, state)
-    
-    # Проверка на врага
-    if "enemy" in chapter:
-        enemy = chapter["enemy"]
-        bot.send_message(chat_id, f"Враг: {enemy['name']} (Здоровье: {enemy['health']})")
-    
-    # Основная клавиатура с выбором
+    bot.send_message(chat_id, chapter['text'])
     send_main_keyboard(chat_id, chapter)
 
 # Основная клавиатура
@@ -77,52 +77,77 @@ def send_main_keyboard(chat_id, chapter):
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
     buttons = [types.KeyboardButton(choice) for choice in chapter['options']]
     markup.add(*buttons)
-    markup.add(types.KeyboardButton("Инвентарь"), types.KeyboardButton("Карта"))
-    bot.send_message(chat_id, chapter['text'], reply_markup=markup)
+    markup.add(types.KeyboardButton("Меню"))  # Кнопка "Меню"
+    bot.send_message(chat_id, ".", reply_markup=markup)
 
-# Отображение карты
-def render_map(state):
-    map_ = state["map"]
-    map_str = ""
-    for row in map_:
-        map_str += "".join("X" if cell == 1 else "." for cell in row) + "\n"
-    return map_str
+# Показ меню
+def show_menu(chat_id):
+    state = load_state(chat_id)
+    state["in_menu"] = True
+    save_state(chat_id, state)
+    
+    markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
+    markup.add(
+        types.KeyboardButton("Продолжить игру"),
+        types.KeyboardButton("Начать заново"),
+        types.KeyboardButton("Сохранить"),
+        types.KeyboardButton("Загрузить"),
+        types.KeyboardButton("Инструкция")
+    )
+    bot.send_message(chat_id, "Игровое меню:", reply_markup=markup)
 
-# Показ карты
-@bot.message_handler(func=lambda message: message.text == "Карта")
-def show_map(message):
-    user_id = message.chat.id
-    state = load_state(user_id)
-    map_str = render_map(state)
-    bot.send_message(user_id, f"Ваша карта:\n{map_str}")
-    send_main_keyboard(user_id, chapters[str(state["chapter"])])
+# Сохранение игры
+def save_game(chat_id):
+    state = load_state(chat_id)
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    save_slot = {
+        "name": f"Сохранение {timestamp}",
+        "chapter": state["chapter"],
+        "health": state["health"]
+    }
+    
+    state["saves"].appendleft(save_slot)  # Добавляем новое сохранение в начало списка
+    save_state(chat_id, state)
+    bot.send_message(chat_id, "Игра сохранена.")
+    show_menu(chat_id)
 
-# Показ инвентаря
-@bot.message_handler(func=lambda message: message.text == "Инвентарь")
-def show_inventory(message):
-    user_id = message.chat.id
-    state = load_state(user_id)
-    inventory = ", ".join(state["inventory"]) if state["inventory"] else "пусто"
-    bot.send_message(user_id, f"Ваш инвентарь: {inventory}")
-    send_main_keyboard(user_id, chapters[str(state["chapter"])])
+# Показ инструкции
+def show_instructions(chat_id):
+    instruction_text = "\n".join([f"{key}: {value['text']}" for key, value in instructions.items()])
+    bot.send_message(chat_id, instruction_text if instruction_text else "Инструкция недоступна.")
 
 # Обработка выбора игрока
 @bot.message_handler(func=lambda message: True)
 def handle_choice(message):
     chat_id = message.chat.id
     state = load_state(chat_id)
-    chapter_num = state["chapter"]
-    chapter = chapters[str(chapter_num)]
     
-    if message.text in chapter['options']:
-        next_step = chapter['options'][message.text]
-        if next_step == "fight":
-            bot.send_message(chat_id, "Скоро будет боёвка!")
-        else:
-            state["chapter"] = next_step
+    if state["in_menu"]:
+        if message.text == "Продолжить игру":
+            state["in_menu"] = False
             save_state(chat_id, state)
             send_chapter(chat_id)
+        elif message.text == "Начать заново":
+            state = {"chapter": first_chapter, "health": 100, "in_menu": False, "saves": deque([], maxlen=SAVES_LIMIT)}
+            save_state(chat_id, state)
+            send_chapter(chat_id)
+        elif message.text == "Инструкция":
+            show_instructions(chat_id)
+        else:
+            bot.send_message(chat_id, "Выберите действие в меню.")
+        return
+    
+    if message.text == "Меню":
+        show_menu(chat_id)
+        return
+    
+    chapter_key = state["chapter"]
+    chapter = chapters.get(chapter_key, None)
+    if chapter and message.text in chapter['options']:
+        state["chapter"] = chapter['options'][message.text]
+        save_state(chat_id, state)
+        send_chapter(chat_id)
     else:
-        bot.send_message(chat_id, "Неправильный выбор.")
-        
+        bot.send_message(chat_id, "Некорректный выбор. Попробуйте снова.")
+
 bot.polling()
