@@ -33,6 +33,9 @@ instructions = load_json(INSTRUCTIONS_FILE)
 # Определение первой главы
 first_chapter = list(chapters.keys())[0]
 
+# Вывод в консоль при запуске
+print("Бот запущен и ожидает команды.")
+
 # Загрузка состояния игрока
 def load_state(user_id):
     save_file = f"{SAVES_DIR}/{user_id}.json"
@@ -62,6 +65,8 @@ def start_game(message):
 # Отправка текущей главы
 def send_chapter(chat_id):
     state = load_state(chat_id)
+    state["in_menu"] = False  # Выход из режима меню после загрузки главы
+    save_state(chat_id, state)
     chapter_key = state["chapter"]
     chapter = chapters.get(chapter_key, None)
     
@@ -75,7 +80,7 @@ def send_chapter(chat_id):
 # Основная клавиатура
 def send_main_keyboard(chat_id, chapter):
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
-    buttons = [types.KeyboardButton(choice) for choice in chapter['options']]
+    buttons = [types.KeyboardButton(choice) for choice in chapter['options'].keys()]
     markup.add(*buttons)
     markup.add(types.KeyboardButton("Меню"))  # Кнопка "Меню"
     bot.send_message(chat_id, ".", reply_markup=markup)
@@ -109,7 +114,7 @@ def save_game(chat_id):
     state["saves"].appendleft(save_slot)  # Добавляем новое сохранение в начало списка
     save_state(chat_id, state)
     bot.send_message(chat_id, "Игра сохранена.")
-    show_menu(chat_id)
+    send_chapter(chat_id)
 
 # Показ инструкции
 def show_instructions(chat_id):
@@ -131,6 +136,8 @@ def handle_choice(message):
             state = {"chapter": first_chapter, "health": 100, "in_menu": False, "saves": deque([], maxlen=SAVES_LIMIT)}
             save_state(chat_id, state)
             send_chapter(chat_id)
+        elif message.text == "Сохранить":
+            save_game(chat_id)
         elif message.text == "Инструкция":
             show_instructions(chat_id)
         else:
