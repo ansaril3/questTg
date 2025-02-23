@@ -1,8 +1,10 @@
 import json
 import os
+import datetime
 from collections import deque
 from telebot import TeleBot, types
 from dotenv import load_dotenv
+
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -102,7 +104,8 @@ def save_game(message):
     chat_id = message.chat.id
     state = load_state(chat_id)
 
-    save_name = f"Сохранение {len(state['saves']) + 1}"
+    # Генерация имени сохранения по текущей дате и времени
+    save_name = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     state["saves"].append({"name": save_name, "chapter": state["chapter"]})
     save_state(chat_id, state)
 
@@ -110,6 +113,7 @@ def save_game(message):
 
     # После сохранения снова отправляем главу и клавиатуру
     send_chapter(chat_id)
+
 
 
 # Загрузка сохранения
