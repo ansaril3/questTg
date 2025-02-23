@@ -58,6 +58,24 @@ def calculate_characteristic(expression, state):
     
     return total
 
+# Проверка условий из "condition"
+def check_condition(state, condition):
+    if not condition.startswith("IF "):
+        return None
+
+    try:
+        parts = condition.split(" ")
+        char_key, char_value = parts[1].split("=")
+        char_value = int(char_value)
+        
+        if state["characteristics"].get(char_key, {"value": 0})["value"] == char_value:
+            btn_target, btn_text = parts[-1].split(",")
+            return btn_target.strip(), btn_text.strip()
+    except Exception:
+        return None
+
+    return None
+
 # Загрузка состояния игрока
 def load_state(user_id):
     save_file = f"{SAVES_DIR}/{user_id}.json"
@@ -79,7 +97,7 @@ def load_state(user_id):
 def save_state(user_id, state):
     save_file = f"{SAVES_DIR}/{user_id}.json"
     state_copy = state.copy()
-    state_copy["saves"] = list(state_copy["saves"])  # Преобразуем deque в список перед сохранением
+    state_copy["saves"] = list(state_copy["saves"])
     with open(save_file, 'w', encoding='utf-8') as file:
         json.dump(state_copy, file, ensure_ascii=False, indent=4)
 
@@ -104,10 +122,9 @@ def update_characteristics(state, chapter):
         for key, char_data in chapter["characteristics"].items():
             new_value = calculate_characteristic(char_data["value"], state)
             state["characteristics"][key] = {
-                "name": char_data.get("name", key),  # Если нет name, используем ключ
+                "name": char_data.get("name", key),
                 "value": new_value
             }
-
 
 # Отправка главы игроку
 def send_chapter(chat_id):
@@ -156,10 +173,22 @@ def send_instruction(chat_id):
     bot.send_message(chat_id, instruction["text"])
     send_instruction_keyboard(chat_id, instruction)
 
-# Отправка клавиатуры с вариантами выбора главы
+# Отправка клавиатуры с кнопками, учитывая условия
 def send_options_keyboard(chat_id, chapter):
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
+    state = load_state(chat_id) 
+
+    # Обычные кнопки
     buttons = [types.KeyboardButton(option) for option in chapter["options"].keys()]
+
+    # Проверяем "condition"
+    if "condition" in chapter:
+        result = check_condition(state, chapter["condition"])
+        if result:
+            btn_target, btn_text = result
+            buttons.append(types.KeyboardButton(btn_text))
+            state["chapter"] = btn_target  # Обновляем главу
+
     markup.add(*buttons)
     markup.add(types.KeyboardButton("📥 Сохранить игру"), types.KeyboardButton("📤 Загрузить игру"))
     markup.add(types.KeyboardButton("📖 Инструкция"), types.KeyboardButton("🎒 Инвентарь"), types.KeyboardButton("📊 Характеристики"))
