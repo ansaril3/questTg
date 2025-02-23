@@ -38,6 +38,7 @@ print("Бот запущен и ожидает команды.")
 
 # Загрузка состояния игрока
 def load_state(user_id):
+    print("load_state ", user_id)
     save_file = f"{SAVES_DIR}/{user_id}.json"
     if os.path.exists(save_file):
         with open(save_file, 'r', encoding='utf-8') as file:
@@ -48,6 +49,7 @@ def load_state(user_id):
 
 # Сохранение состояния игрока
 def save_state(user_id, state):
+    print("save_state ", user_id, state)
     save_file = f"{SAVES_DIR}/{user_id}.json"
     state_copy = state.copy()
     state_copy["saves"] = list(state_copy["saves"])  # Преобразуем deque в список перед сохранением
@@ -64,6 +66,7 @@ def start_game(message):
 
 # Отправка текущей главы
 def send_chapter(chat_id):
+    print("send_chapter ", chat_id)
     state = load_state(chat_id)
     state["in_menu"] = False  # Выход из режима меню после загрузки главы
     save_state(chat_id, state)
@@ -79,6 +82,7 @@ def send_chapter(chat_id):
 
 # Основная клавиатура
 def send_main_keyboard(chat_id, chapter):
+    print("send_main_keyboard ", chat_id, chapter)
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
     buttons = [types.KeyboardButton(choice) for choice in chapter['options'].keys()]
     markup.add(*buttons)
@@ -87,6 +91,7 @@ def send_main_keyboard(chat_id, chapter):
 
 # Показ меню
 def show_menu(chat_id):
+    print("show_menu ", chat_id)
     state = load_state(chat_id)
     state["in_menu"] = True
     save_state(chat_id, state)
@@ -103,6 +108,7 @@ def show_menu(chat_id):
 
 # Сохранение игры
 def save_game(chat_id):
+    print("save_game ", chat_id)
     state = load_state(chat_id)
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     save_slot = {
@@ -133,12 +139,14 @@ def load_game(chat_id):
 
 # Показ инструкции
 def show_instructions(chat_id):
+    print("show_instructions ", chat_id)
     instruction_text = "\n".join([f"{key}: {value['text']}" for key, value in instructions.items()])
     bot.send_message(chat_id, instruction_text if instruction_text else "Инструкция недоступна.")
 
 # Обработка выбора игрока
 @bot.message_handler(func=lambda message: True)
 def handle_choice(message):
+    print("handle_choice ", message.chat.id, message.text)
     chat_id = message.chat.id
     state = load_state(chat_id)
     
