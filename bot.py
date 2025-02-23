@@ -15,7 +15,7 @@ bot = TeleBot(TOKEN)
 CHAPTERS_FILE = 'chapters.json'
 INSTRUCTIONS_FILE = 'instructions.json'
 SAVES_DIR = 'saves'
-SAVES_LIMIT = 5  # Максимальное количество сохранений на игрока
+SAVES_LIMIT = 5  # Максимальное количество сохранений
 
 # Создаем папку для сохранений, если её нет
 if not os.path.exists(SAVES_DIR):
@@ -43,7 +43,13 @@ def load_state(user_id):
             state = json.load(file)
             state["saves"] = deque(state.get("saves", []), maxlen=SAVES_LIMIT)
             return state
-    return {"chapter": first_chapter, "instruction": None, "saves": deque([], maxlen=SAVES_LIMIT)}
+    return {
+        "chapter": first_chapter,
+        "instruction": None,
+        "inventory": [],
+        "gold": 0,  # Начальное количество золота
+        "saves": deque([], maxlen=SAVES_LIMIT)
+    }
 
 # Сохранение состояния игрока
 def save_state(user_id, state):
@@ -57,7 +63,13 @@ def save_state(user_id, state):
 @bot.message_handler(commands=['start'])
 def start_game(message):
     user_id = message.chat.id
-    state = {"chapter": first_chapter, "instruction": None, "saves": deque([], maxlen=SAVES_LIMIT)}
+    state = {
+        "chapter": first_chapter,
+        "instruction": None,
+        "inventory": [],
+        "gold": 0,
+        "saves": deque([], maxlen=SAVES_LIMIT)
+    }
     save_state(user_id, state)
     send_chapter(user_id)
 
@@ -70,6 +82,29 @@ def send_chapter(chat_id):
     if not chapter:
         bot.send_message(chat_id, "Ошибка: глава не найдена.")
         return
+
+    # Изменяем золото (теперь можно уходить в минус)
+    if "remove_gold" in chapter:
+        state["gold"] -= chapter["remove_gold"]
+
+    if "add_gold" in chapter:
+        state["gold"] += chapter["add_gold"]
+
+    # Добавляем предметы
+    if "add_items" in chapter:
+        for item in chapter["add_items"]:
+            if item not in state["inventory"]:
+                state["inventory"].append(item)
+
+    # Удаляем предметы
+    if "remove_items" in chapter:
+        for item in chapter["remove_items"]:
+            if item in state["inventory"]:
+                state["inventory"].remove(item)
+
+    # Сохраняем изменения
+    state["chapter"] = chapter_key
+    save_state(chat_id, state)
 
     bot.send_message(chat_id, chapter["text"])
     send_options_keyboard(chat_id, chapter)
@@ -93,8 +128,8 @@ def send_options_keyboard(chat_id, chapter):
     buttons = [types.KeyboardButton(option) for option in chapter["options"].keys()]
     markup.add(*buttons)
     markup.add(types.KeyboardButton("📥 Сохранить игру"), types.KeyboardButton("📤 Загрузить игру"))
-    markup.add(types.KeyboardButton("📖 Инструкция"))
-    bot.send_message(chat_id, "Выберите действие:", reply_markup=markup)
+    markup.add(types.KeyboardButton("📖 Инструкция"), types.KeyboardButton("🎒 Инвентарь"))
+    bot.send_message(chat_id, ".", reply_markup=markup)
 
 # Отправка клавиатуры для инструкции
 def send_instruction_keyboard(chat_id, instruction):
@@ -103,6 +138,17 @@ def send_instruction_keyboard(chat_id, instruction):
     markup.add(*buttons)
     markup.add(types.KeyboardButton("🔙 Вернуться в игру"))
     bot.send_message(chat_id, "Выберите раздел инструкции:", reply_markup=markup)
+# Просмотр инвентаря (с золотыми монетами)
+@bot.message_handler(func=lambda message: message.text == "🎒 Инвентарь")
+def show_inventory(message):
+    chat_id = message.chat.id
+    state = load_state(chat_id)
+
+    inventory_text = "\n".join(f"🔹 {item}" for item in state["inventory"]) if state["inventory"] else "📭 Пусто"
+    bot.send_message(chat_id, f"🎒 Ваш инвентарь:\n{inventory_text}\n\n💰 Золото: {state['gold']} монет")
+
+    # После отображения инвентаря повторно отправляем клавиатуру действий
+    send_options_keyboard(chat_id, chapters.get(state["chapter"]))
 
 # Обработка выбора игрока (главы)
 @bot.message_handler(func=lambda message: message.text in get_all_options())
