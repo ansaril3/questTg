@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import datetime
 from collections import deque
 from telebot import TeleBot, types
@@ -32,8 +33,30 @@ def load_json(file_path):
 chapters = load_json(CHAPTERS_FILE)
 instructions = load_json(INSTRUCTIONS_FILE)
 
-first_chapter = list(chapters.keys())[0] if chapters else None  # Первая глава
-first_instruction = list(instructions.keys())[0] if instructions else None  # Первая инструкция
+first_chapter = list(chapters.keys())[0] if chapters else None
+first_instruction = list(instructions.keys())[0] if instructions else None
+
+# Генерация случайного числа (например, RND6)
+def roll_dice(expression):
+    if expression.startswith("RND"):
+        dice_max = int(expression[3:])
+        return random.randint(1, dice_max)
+    return int(expression)
+
+# Вычисление значения характеристики
+def calculate_characteristic(expression, state):
+    tokens = expression.split()
+    total = 0
+
+    for token in tokens:
+        if token.startswith("RND"):
+            total += roll_dice(token)
+        elif token in state["characteristics"]:
+            total += state["characteristics"][token]["value"]
+        elif token.isdigit() or (token[1:].isdigit() and token[0] in "+-"):
+            total += int(token)
+    
+    return total
 
 # Загрузка состояния игрока
 def load_state(user_id):
@@ -47,7 +70,8 @@ def load_state(user_id):
         "chapter": first_chapter,
         "instruction": None,
         "inventory": [],
-        "gold": 0,  # Начальное количество золота
+        "gold": 0,
+        "characteristics": {},
         "saves": deque([], maxlen=SAVES_LIMIT)
     }
 
@@ -68,10 +92,22 @@ def start_game(message):
         "instruction": None,
         "inventory": [],
         "gold": 0,
+        "characteristics": {},
         "saves": deque([], maxlen=SAVES_LIMIT)
     }
     save_state(user_id, state)
     send_chapter(user_id)
+
+# Обновление характеристик персонажа
+def update_characteristics(state, chapter):
+    if "characteristics" in chapter:
+        for key, char_data in chapter["characteristics"].items():
+            new_value = calculate_characteristic(char_data["value"], state)
+            state["characteristics"][key] = {
+                "name": char_data.get("name", key),  # Если нет name, используем ключ
+                "value": new_value
+            }
+
 
 # Отправка главы игроку
 def send_chapter(chat_id):
@@ -83,26 +119,24 @@ def send_chapter(chat_id):
         bot.send_message(chat_id, "Ошибка: глава не найдена.")
         return
 
-    # Изменяем золото (теперь можно уходить в минус)
-    if "remove_gold" in chapter:
-        state["gold"] -= chapter["remove_gold"]
+    update_characteristics(state, chapter)
 
-    if "add_gold" in chapter:
-        state["gold"] += chapter["add_gold"]
-
-    # Добавляем предметы
     if "add_items" in chapter:
         for item in chapter["add_items"]:
             if item not in state["inventory"]:
                 state["inventory"].append(item)
-
-    # Удаляем предметы
+    
     if "remove_items" in chapter:
         for item in chapter["remove_items"]:
             if item in state["inventory"]:
                 state["inventory"].remove(item)
 
-    # Сохраняем изменения
+    if "add_gold" in chapter:
+        state["gold"] += chapter["add_gold"]
+    
+    if "remove_gold" in chapter:
+        state["gold"] -= chapter["remove_gold"]
+
     state["chapter"] = chapter_key
     save_state(chat_id, state)
 
@@ -128,7 +162,7 @@ def send_options_keyboard(chat_id, chapter):
     buttons = [types.KeyboardButton(option) for option in chapter["options"].keys()]
     markup.add(*buttons)
     markup.add(types.KeyboardButton("📥 Сохранить игру"), types.KeyboardButton("📤 Загрузить игру"))
-    markup.add(types.KeyboardButton("📖 Инструкция"), types.KeyboardButton("🎒 Инвентарь"))
+    markup.add(types.KeyboardButton("📖 Инструкция"), types.KeyboardButton("🎒 Инвентарь"), types.KeyboardButton("📊 Характеристики"))
     bot.send_message(chat_id, ".", reply_markup=markup)
 
 # Отправка клавиатуры для инструкции
@@ -205,6 +239,22 @@ def exit_instruction(message):
     state["instruction"] = None  # Выходим из режима инструкции
     save_state(chat_id, state)
     send_chapter(chat_id)  # Возвращаем игрока в квест
+
+# Просмотр характеристик
+@bot.message_handler(func=lambda message: message.text == "📊 Характеристики")
+def show_characteristics(message):
+    chat_id = message.chat.id
+    state = load_state(chat_id)
+
+    if not state["characteristics"]:
+        bot.send_message(chat_id, "📊 У вас пока нет характеристик.")
+    else:
+        char_text = "\n".join(
+            f"{char.get('name', key)}: {char['value']}" for key, char in state["characteristics"].items()
+        )
+        bot.send_message(chat_id, f"📊 Ваши характеристики:\n{char_text}")
+
+    send_options_keyboard(chat_id, chapters.get(state["chapter"]))
 
 # Запуск бота
 bot.polling()
