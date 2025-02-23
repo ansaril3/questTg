@@ -116,6 +116,21 @@ def save_game(chat_id):
     bot.send_message(chat_id, "Игра сохранена.")
     send_chapter(chat_id)
 
+# Загрузка сохранений
+def load_game(chat_id):
+    print("load_game ", chat_id)
+    state = load_state(chat_id)
+    state["in_menu"] = False
+    if not state["saves"]:
+        bot.send_message(chat_id, "Нет доступных сохранений.")
+        return
+    
+    markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
+    for i, save in enumerate(state["saves"]):
+        markup.add(types.KeyboardButton(f"Загрузить {i+1} ({save['name']})"))
+    
+    bot.send_message(chat_id, "Выберите сохранение:", reply_markup=markup)
+
 # Показ инструкции
 def show_instructions(chat_id):
     instruction_text = "\n".join([f"{key}: {value['text']}" for key, value in instructions.items()])
@@ -138,6 +153,8 @@ def handle_choice(message):
             send_chapter(chat_id)
         elif message.text == "Сохранить":
             save_game(chat_id)
+        elif message.text == "Загрузить":
+            load_game(chat_id)
         elif message.text == "Инструкция":
             show_instructions(chat_id)
         else:
