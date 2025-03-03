@@ -26,7 +26,7 @@ def calculate_characteristic(expression, state):
 
 # Проверка условий из "condition"
 def check_condition(state, condition):
-    if not condition.startswith("IF "):
+    if not condition.lower().startswith('if '):
         return None
 
     try:
