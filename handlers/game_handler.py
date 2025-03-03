@@ -6,7 +6,9 @@ from utils.helpers import check_condition, calculate_characteristic
 import telebot.types as types
 from collections import deque
 from datetime import datetime
+import os
 
+DATA_DIR = "data"  # 📂 Папка с изображениями
 # Команда /start (начало игры)
 @bot.message_handler(commands=['start'])
 def start_game(message):
@@ -64,6 +66,16 @@ def send_chapter(chat_id):
     save_state(chat_id, state)
 
     bot.send_message(chat_id, chapter["text"])
+    # 📷 Отправляем изображение, если есть
+    if "image" in chapter:
+        image_path = DATA_DIR + chapter["image"].replace("\\", "/")
+        print(image_path)
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as photo:
+                bot.send_photo(chat_id, photo)
+        else:
+            bot.send_message(chat_id, f"⚠️ Изображение не найдено: {chapter['image']}")
+
     send_options_keyboard(chat_id, chapter)
 
 # Отправка клавиатуры с кнопками, учитывая условия

@@ -4,6 +4,7 @@
       "options": {
           "Далее": "Prolog1"
       },
+        "image": "/Images/3.JPG",
       "add_items": ["Кинжал, кольцо"],
       "add_gold": 10
   },
