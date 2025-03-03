@@ -5,3 +5,5 @@ saves/
 .env
 .DS_Store
 .DS_Store
+output.json
+rest.txt

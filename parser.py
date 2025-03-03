@@ -52,8 +52,10 @@ def parse_input_to_json(input_path):
                 if "conditions" not in json_data[chapter_id]:
                     json_data[chapter_id]["conditions"] = []
                 json_data[chapter_id]["conditions"].append(line.strip())
-            elif 'Image' in line:
-                continue
+            elif line.lower().startswith('image'):  # Обработка строк, начинающихся с "Image"
+                image_value = line.split('=', 1)[1].strip().strip('"')  # Извлекаем значение после "=" и убираем кавычки
+                image_value = image_value.replace('\\', '/')  # Заменяем двойные слеши на одинарные
+                json_data[chapter_id]["image"] = image_value
             elif '=' in line:
                 if "characteristics" not in json_data[chapter_id]:
                     json_data[chapter_id]["characteristics"] = {}
@@ -71,7 +73,6 @@ def parse_input_to_json(input_path):
 
         json_data[chapter_id]["text"] = json_data[chapter_id]["text"].strip()
 
-        # Удаляем пустые поля
         if "add_gold" in json_data[chapter_id] and json_data[chapter_id]["add_gold"] == 0:
             del json_data[chapter_id]["add_gold"]
         if "remove_gold" in json_data[chapter_id] and json_data[chapter_id]["remove_gold"] == 0:
