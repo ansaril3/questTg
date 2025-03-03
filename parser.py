@@ -18,12 +18,12 @@ def parse_input_to_json(input_path):
             if line.startswith('PLN'):
                 json_data[chapter_id]["text"] += line[4:].strip() + " "
             elif line.startswith('BTN'):
-                parts = line[4:].split(',')
+                parts = line[4:].split(',', 1)  # Разделяем только по первой запятой
                 if len(parts) == 2:
                     json_data[chapter_id]["options"][parts[1].strip()] = parts[0].strip()
                 else:
                     rest_data.append(f"{chapter_id}: {line}")
-            elif line.startswith('Inv+'):
+            elif line.lower().startswith('inv+'):
                 if 'Золотых монет' in line:
                     amount = re.findall(r'\d+', line)
                     if amount:
@@ -34,7 +34,7 @@ def parse_input_to_json(input_path):
                     if "add_items" not in json_data[chapter_id]:
                         json_data[chapter_id]["add_items"] = []
                     json_data[chapter_id]["add_items"].append(line[5:].strip())
-            elif line.startswith('Inv-'):
+            elif line.lower().startswith('inv-'):
                 if 'Золотых монет' in line:
                     amount = re.findall(r'\d+', line)
                     if amount:
@@ -45,6 +45,27 @@ def parse_input_to_json(input_path):
                     if "remove_items" not in json_data[chapter_id]:
                         json_data[chapter_id]["remove_items"] = []
                     json_data[chapter_id]["remove_items"].append(line[5:].strip())
+            elif line.lower().startswith('goto '):
+                goto_value = line[5:].strip()  # Извлекаем значение после "GoTo"
+                json_data[chapter_id]["options"] = {"->": goto_value}
+            elif line.lower().startswith('if '):  # Проверка на "if" в любом регистре
+                if "conditions" not in json_data[chapter_id]:
+                    json_data[chapter_id]["conditions"] = []
+                json_data[chapter_id]["conditions"].append(line.strip())
+            elif 'Image' in line:
+                continue
+            elif '=' in line:
+                if "characteristics" not in json_data[chapter_id]:
+                    json_data[chapter_id]["characteristics"] = {}
+                parts = line.split(';')
+                key_value = parts[0].strip().split('=')
+                key = key_value[0].strip()
+                value = key_value[1].strip()
+                name = parts[1].strip() if len(parts) > 1 else ""
+                json_data[chapter_id]["characteristics"][key] = {
+                    "value": value,
+                    "name": name
+                }
             else:
                 rest_data.append(f"{chapter_id}: {line}")
 
@@ -59,6 +80,10 @@ def parse_input_to_json(input_path):
             del json_data[chapter_id]["add_items"]
         if "remove_items" in json_data[chapter_id] and not json_data[chapter_id]["remove_items"]:
             del json_data[chapter_id]["remove_items"]
+        if "conditions" in json_data[chapter_id] and not json_data[chapter_id]["conditions"]:
+            del json_data[chapter_id]["conditions"]
+        if "characteristics" in json_data[chapter_id] and not json_data[chapter_id]["characteristics"]:
+            del json_data[chapter_id]["characteristics"]
 
     return json_data, rest_data
 
