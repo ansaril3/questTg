@@ -140,8 +140,10 @@ def send_options_keyboard(chat_id, chapter):
 
             elif action["type"] == "xbtn":
                 buttons.append(types.KeyboardButton(action["text"]))
-                chapter["options"][action["text"]] = action["target"]  # ✅ Добавляем в options
-                process_inventory_action(state, action["inv_action"])
+                chapter["options"][action["text"]] = {
+                    "target": action["target"],
+                    "inv_action": action["inv_action"]
+                }  # ✅ Сохраняем inv_action в options
 
     # Сохраняем обновлённое состояние
     save_state(chat_id, state)
@@ -166,7 +168,15 @@ def handle_choice(message):
     chapter = chapters.get(chapter_key)
 
     if message.text in chapter["options"]:
-        state["chapter"] = chapter["options"][message.text]
+        option_data = chapter["options"][message.text]
+
+        # Если это xbtn - выполняем inv_action перед переходом
+        if isinstance(option_data, dict) and "inv_action" in option_data:
+            process_inventory_action(state, option_data["inv_action"])  # ✅ Выполняем inv_action
+            state["chapter"] = option_data["target"]
+        else:
+            state["chapter"] = option_data
+
         save_state(chat_id, state)
         send_chapter(chat_id)
     else:
