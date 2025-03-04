@@ -48,10 +48,56 @@ def parse_input_to_json(input_path):
             elif line.lower().startswith('goto '):
                 goto_value = line[5:].strip()  # Извлекаем значение после "GoTo"
                 json_data[chapter_id]["options"] = {"->": goto_value}
-            elif line.lower().startswith('if '):  # Проверка на "if" в любом регистре
-                if "conditions" not in json_data[chapter_id]:
-                    json_data[chapter_id]["conditions"] = []
-                json_data[chapter_id]["conditions"].append(line.strip())
+            elif line.lower().startswith('if '):  # Обработка строк, начинающихся с "if"
+                # Разделяем строку на условие и действия
+                if "then" in line.lower():
+                    condition_part, actions_part = re.split(r'\bthen\b', line, flags=re.IGNORECASE, maxsplit=1)
+                    condition = condition_part[3:].strip()  # Убираем "if" и лишние пробелы
+                    actions = [action.strip() for action in actions_part.split('&')]  # Разделяем действия по "&"
+                    
+                    # Парсим действия
+                    parsed_actions = []
+                    for action in actions:
+                        if action.lower().startswith('btn'):
+                            parts = action[4:].split(',', 1)
+                            if len(parts) == 2:
+                                parsed_actions.append({"type": "btn", "target": parts[0].strip(), "text": parts[1].strip()})
+                        elif action.lower().startswith('goto'):
+                            target = action[5:].strip()
+                            parsed_actions.append({"type": "goto", "target": target})
+                        elif action.lower().startswith('pln'):
+                            text = action[4:].strip()
+                            parsed_actions.append({"type": "pln", "text": text})
+                        elif action.lower().startswith('inv+'):
+                            item = action[5:].strip()
+                            parsed_actions.append({"type": "inv+", "item": item})
+                        elif action.lower().startswith('inv-'):
+                            item = action[5:].strip()
+                            parsed_actions.append({"type": "inv-", "item": item})
+                        elif action.lower().startswith('xbtn'):
+                            parts = action[5:].split(',', 2)
+                            if len(parts) == 3:
+                                parsed_actions.append({
+                                    "type": "xbtn",
+                                    "target": parts[0].strip(),
+                                    "inv_action": parts[1].strip(),
+                                    "text": parts[2].strip()
+                                })
+                        elif '=' in action:  # Обработка присваивания значений
+                            key, value = action.split('=', 1)
+                            parsed_actions.append({"type": "assign", "key": key.strip(), "value": value.strip()})
+                        else:
+                            parsed_actions.append({"type": "unknown", "raw": action})
+
+                    # Сохраняем условие и действия в JSON
+                    if "conditions" not in json_data[chapter_id]:
+                        json_data[chapter_id]["conditions"] = []
+                    json_data[chapter_id]["conditions"].append({
+                        "condition": condition,
+                        "actions": parsed_actions
+                    })
+                else:
+                    rest_data.append(f"{chapter_id}: {line}")
             elif line.lower().startswith('image'):  # Обработка строк, начинающихся с "Image"
                 image_value = line.split('=', 1)[1].strip().strip('"')  # Извлекаем значение после "=" и убираем кавычки
                 image_value = image_value.replace('\\', '/')  # Заменяем двойные слеши на одинарные
