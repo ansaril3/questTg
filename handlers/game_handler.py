@@ -109,10 +109,25 @@ def send_options_keyboard(chat_id, chapter):
                 bot.send_message(chat_id, action["text"])
             elif action["type"] == "assign":
                 key, value = action["key"], action["value"]
+                # Получаем текущее значение характеристики (если нет - берем 0)
+                current_value = state["characteristics"].get(key, {"value": 0})["value"]
+                # Подготавливаем локальный контекст для eval (используем характеристики из state)
+                local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
+                try:
+                    # Если value - число, присваиваем его напрямую
+                    if value.isdigit():
+                        new_value = int(value)
+                    else:
+                        new_value = eval(value, {}, local_vars)  # Выполняем выражение в безопасном окружении
+                except Exception as e:
+                    print(f"Ошибка в assign: {e}")
+                    new_value = current_value  # Если ошибка, оставляем старое значение
+
                 state["characteristics"][key] = {
-                    "name": key,
-                    "value": eval(value, {}, {"U1": state["characteristics"].get("U1", {"value": 0})["value"]}),
+                    "name": state["characteristics"].get(key, {"name": key})["name"],
+                    "value": new_value,
                 }
+
             elif action["type"] == "xbtn":
                 buttons.append(types.KeyboardButton(action["text"]))
                 chapter["options"][action["text"]] = action["target"]  # ✅ Добавляем в options
