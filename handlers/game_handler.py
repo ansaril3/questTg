@@ -82,31 +82,40 @@ def send_options_keyboard(chat_id, chapter):
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
     state = load_state(chat_id)
 
-    # Стандартные кнопки
+    # Стандартные кнопки из options
     buttons = [types.KeyboardButton(option) for option in chapter["options"].keys()]
 
     # Проверяем условия из "conditions"
+    condition_buttons = []
     if "conditions" in chapter:
         condition_buttons, condition_actions = check_conditions(state, chapter["conditions"])
+
         print(f"handler | condition_buttons: {condition_buttons}")
+
         # Добавляем кнопки из условий
         for btn in condition_buttons:
             buttons.append(types.KeyboardButton(btn["text"]))
-            state["chapter"] = btn["target"]
+            # ✅ Сохраняем возможные переходы в options
+            chapter["options"][btn["text"]] = btn["target"]
+
         print(f"handler | condition_actions: {condition_actions}")
+
         # Выполняем действия из условий
         for action in condition_actions:
-            print(f"handler |action: {action}")
+            print(f"handler | action: {action}")
             if action["type"] == "goto":
                 state["chapter"] = action["target"]
             elif action["type"] == "pln":
                 bot.send_message(chat_id, action["text"])
             elif action["type"] == "assign":
                 key, value = action["key"], action["value"]
-                state["characteristics"][key] = {"name": key, "value": eval(value, {}, {"U1": state["characteristics"].get("U1", {"value": 0})["value"]})}
+                state["characteristics"][key] = {
+                    "name": key,
+                    "value": eval(value, {}, {"U1": state["characteristics"].get("U1", {"value": 0})["value"]}),
+                }
             elif action["type"] == "xbtn":
                 buttons.append(types.KeyboardButton(action["text"]))
-                state["chapter"] = action["target"]
+                chapter["options"][action["text"]] = action["target"]  # ✅ Добавляем в options
                 process_inventory_action(state, action["inv_action"])
 
     # Сохраняем обновлённое состояние
