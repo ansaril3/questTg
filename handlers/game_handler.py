@@ -2,7 +2,7 @@
 
 from config import bot, chapters, first_chapter  
 from utils.state_manager import load_state, save_state, SAVES_LIMIT
-from utils.helpers import check_condition, calculate_characteristic
+from utils.helpers import check_conditions, calculate_characteristic, process_inventory_action
 import telebot.types as types
 from collections import deque
 from datetime import datetime
@@ -69,7 +69,6 @@ def send_chapter(chat_id):
     # 📷 Отправляем изображение, если есть
     if "image" in chapter:
         image_path = DATA_DIR + chapter["image"].replace("\\", "/")
-        print(image_path)
         if os.path.exists(image_path):
             with open(image_path, "rb") as photo:
                 bot.send_photo(chat_id, photo)
@@ -83,15 +82,37 @@ def send_options_keyboard(chat_id, chapter):
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
     state = load_state(chat_id)
 
+    # Стандартные кнопки
     buttons = [types.KeyboardButton(option) for option in chapter["options"].keys()]
 
-    if "condition" in chapter:
-        result = check_condition(state, chapter["condition"])
-        if result:
-            btn_target, btn_text = result
-            buttons.append(types.KeyboardButton(btn_text))
-            state["chapter"] = btn_target
+    # Проверяем условия из "conditions"
+    if "conditions" in chapter:
+        condition_buttons, condition_actions = check_conditions(state, chapter["conditions"])
+        print(f"handler | condition_buttons: {condition_buttons}")
+        # Добавляем кнопки из условий
+        for btn in condition_buttons:
+            buttons.append(types.KeyboardButton(btn["text"]))
+            state["chapter"] = btn["target"]
+        print(f"handler | condition_actions: {condition_actions}")
+        # Выполняем действия из условий
+        for action in condition_actions:
+            print(f"handler |action: {action}")
+            if action["type"] == "goto":
+                state["chapter"] = action["target"]
+            elif action["type"] == "pln":
+                bot.send_message(chat_id, action["text"])
+            elif action["type"] == "assign":
+                key, value = action["key"], action["value"]
+                state["characteristics"][key] = {"name": key, "value": eval(value, {}, {"U1": state["characteristics"].get("U1", {"value": 0})["value"]})}
+            elif action["type"] == "xbtn":
+                buttons.append(types.KeyboardButton(action["text"]))
+                state["chapter"] = action["target"]
+                process_inventory_action(state, action["inv_action"])
 
+    # Сохраняем обновлённое состояние
+    save_state(chat_id, state)
+
+    # Добавляем основные кнопки
     markup.add(*buttons)
     markup.add(
         types.KeyboardButton("📥 Сохранить игру"),
