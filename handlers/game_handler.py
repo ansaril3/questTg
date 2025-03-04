@@ -33,6 +33,7 @@ def update_characteristics(state, chapter):
                 "name": char_data.get("name", key),
                 "value": new_value,
             }
+            print(f"handler | update_characteristics | {key}: {new_value}")
 
 # Отправка главы игроку
 def send_chapter(chat_id):
@@ -40,6 +41,7 @@ def send_chapter(chat_id):
     chapter_key = state["chapter"]
     chapter = chapters.get(chapter_key)
 
+    print(f"handler | ----------------------------- chapter: {chapter_key}")
     if not chapter:
         bot.send_message(chat_id, "Ошибка: глава не найдена.")
         return
@@ -50,17 +52,21 @@ def send_chapter(chat_id):
         for item in chapter["add_items"]:
             if item not in state["inventory"]:
                 state["inventory"].append(item)
+                print(f"handler | add item: {item}")
     
     if "remove_items" in chapter:
         for item in chapter["remove_items"]:
             if item in state["inventory"]:
                 state["inventory"].remove(item)
+                print(f"handler | remove item: {item}")
 
     if "add_gold" in chapter:
         state["gold"] += chapter["add_gold"]
+        print(f"handler | add gold: {chapter['add_gold']}")
     
     if "remove_gold" in chapter:
         state["gold"] -= chapter["remove_gold"]
+        print(f"handler | remove gold: {chapter['remove_gold']}")  
 
     state["chapter"] = chapter_key
     save_state(chat_id, state)
