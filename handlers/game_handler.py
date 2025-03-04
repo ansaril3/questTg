@@ -110,7 +110,11 @@ def send_options_keyboard(chat_id, chapter):
         for action in condition_actions:
             print(f"handler | action: {action}")
             if action["type"] == "goto":
-                state["chapter"] = action["target"]
+                state["chapter"] = action["target"]  # Устанавливаем новую главу
+                save_state(chat_id, state)  # Сохраняем обновленное состояние
+                send_chapter(chat_id)  # Немедленно загружаем новую главу
+                return 
+            
             elif action["type"] == "pln":
                 bot.send_message(chat_id, action["text"])
             elif action["type"] == "assign":
