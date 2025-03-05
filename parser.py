@@ -49,13 +49,11 @@ def parse_input_to_json(input_path):
                 goto_value = line[5:].strip()  # Извлекаем значение после "GoTo"
                 json_data[chapter_id]["options"] = {"->": goto_value}
             elif line.lower().startswith('if '):  # Обработка строк, начинающихся с "if"
-                # Разделяем строку на условие и действия
                 if "then" in line.lower():
                     condition_part, actions_part = re.split(r'\bthen\b', line, flags=re.IGNORECASE, maxsplit=1)
                     condition = condition_part[3:].strip()  # Убираем "if" и лишние пробелы
                     actions = [action.strip() for action in actions_part.split('&')]  # Разделяем действия по "&"
-                    
-                    # Парсим действия
+
                     parsed_actions = []
                     for action in actions:
                         if action.lower().startswith('btn'):
@@ -74,14 +72,32 @@ def parse_input_to_json(input_path):
                         elif action.lower().startswith('inv-'):
                             item = action[5:].strip()
                             parsed_actions.append({"type": "inv-", "item": item})
-                        elif action.lower().startswith('xbtn'):
-                            parts = action[5:].split(',', 2)
-                            if len(parts) == 3:
+                        elif action.lower().startswith('xbtn'):  # Обработка XBTN внутри if
+                            parts = [part.strip() for part in action[5:].split(',')]  # Разделяем по запятым
+                            if len(parts) >= 2:
+                                target = parts[0]  # Первая часть — целевое поле
+                                actions_xbtn = parts[1:-1]  # Действия (все, кроме первого и последнего)
+                                button_text = parts[-1]  # Последняя часть — текст кнопки
+
+                                parsed_xbtn_actions = []
+                                for act in actions_xbtn:
+                                    if act.lower().startswith('inv+'):
+                                        item = act[5:].strip()
+                                        parsed_xbtn_actions.append({"type": "inv+", "item": item})
+                                    elif act.lower().startswith('inv-'):
+                                        item = act[5:].strip()
+                                        parsed_xbtn_actions.append({"type": "inv-", "item": item})
+                                    elif '=' in act:  # Обработка присваивания значений
+                                        key, value = act.split('=', 1)
+                                        parsed_xbtn_actions.append({"type": "assign", "key": key.strip(), "value": value.strip()})
+                                    else:
+                                        parsed_xbtn_actions.append({"type": "unknown", "raw": act})
+
                                 parsed_actions.append({
                                     "type": "xbtn",
-                                    "target": parts[0].strip(),
-                                    "inv_action": parts[1].strip(),
-                                    "text": parts[2].strip()
+                                    "target": target,
+                                    "actions": parsed_xbtn_actions,
+                                    "text": button_text
                                 })
                         elif '=' in action:  # Обработка присваивания значений
                             key, value = action.split('=', 1)
@@ -89,13 +105,41 @@ def parse_input_to_json(input_path):
                         else:
                             parsed_actions.append({"type": "unknown", "raw": action})
 
-                    # Сохраняем условие и действия в JSON
                     if "conditions" not in json_data[chapter_id]:
                         json_data[chapter_id]["conditions"] = []
                     json_data[chapter_id]["conditions"].append({
                         "condition": condition,
                         "actions": parsed_actions
                     })
+                else:
+                    rest_data.append(f"{chapter_id}: {line}")
+            elif line.lower().startswith('xbtn'):  # Обработка XBTN в начале строки
+                parts = [part.strip() for part in line[5:].split(',')]  # Разделяем по запятым
+                if len(parts) >= 2:
+                    target = parts[0]  # Первая часть — целевое поле
+                    actions = parts[1:-1]  # Действия (все, кроме первого и последнего)
+                    button_text = parts[-1]  # Последняя часть — текст кнопки
+
+                    parsed_actions = []
+                    for action in actions:
+                        if action.lower().startswith('inv+'):
+                            item = action[5:].strip()
+                            parsed_actions.append({"type": "inv+", "item": item})
+                        elif action.lower().startswith('inv-'):
+                            item = action[5:].strip()
+                            parsed_actions.append({"type": "inv-", "item": item})
+                        elif '=' in action:  # Обработка присваивания значений
+                            key, value = action.split('=', 1)
+                            parsed_actions.append({"type": "assign", "key": key.strip(), "value": value.strip()})
+                        else:
+                            parsed_actions.append({"type": "unknown", "raw": action})
+
+                    # Сохраняем xbtn как объект
+                    json_data[chapter_id]["xbtn"] = {
+                        "target": target,
+                        "actions": parsed_actions,
+                        "text": button_text
+                    }
                 else:
                     rest_data.append(f"{chapter_id}: {line}")
             elif line.lower().startswith('image'):  # Обработка строк, начинающихся с "Image"
