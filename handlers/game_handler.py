@@ -2,7 +2,7 @@
 
 from config import bot, chapters, first_chapter  
 from utils.state_manager import load_state, save_state, SAVES_LIMIT
-from utils.helpers import check_conditions, calculate_characteristic, process_inventory_action
+from utils.helpers import check_conditions, calculate_characteristic, process_inventory_action, replace_variables_in_text
 import telebot.types as types
 from collections import deque
 from datetime import datetime
@@ -71,7 +71,8 @@ def send_chapter(chat_id):
     state["chapter"] = chapter_key
     save_state(chat_id, state)
 
-    bot.send_message(chat_id, chapter["text"])
+    chapter_text = replace_variables_in_text(chapter["text"], state)
+    bot.send_message(chat_id, chapter_text)
     # 📷 Отправляем изображение, если есть
     if "image" in chapter:
         image_path = DATA_DIR + chapter["image"].replace("\\", "/")
@@ -114,7 +115,12 @@ def send_options_keyboard(chat_id, chapter):
                 return 
             
             elif action["type"] == "pln":
-                bot.send_message(chat_id, action["text"])
+                if isinstance(action["text"], str):  # ✅ Проверяем, что это строка
+                    processed_text = replace_variables_in_text(action["text"], state)
+                    bot.send_message(chat_id, processed_text)
+                else:
+                    print(f"Ошибка: ожидалась строка, но получено {type(action['text'])}")
+
             elif action["type"] == "assign":
                 key, value = action["key"], action["value"]
                 # Получаем текущее значение характеристики (если нет - берем 0)

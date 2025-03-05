@@ -40,13 +40,12 @@ def check_conditions(state, conditions):
             for action in actions_list:
                 print(f"helper | check_conditions | action: {action}")
                 action_type = action["type"]
-                print(f"helper | check_conditions | action_type: {action_type}")
                 if action_type == "btn":
                     buttons.append({"target": action["target"], "text": action["text"]})
                 elif action_type == "goto":
                     actions.append({"type": "goto", "target": action["target"]})
                 elif action_type == "pln":
-                    actions.append({"type": "pln", "text": {action['text']}})
+                    actions.append({"type": "pln", "text": action["text"]})
                 elif action_type == "assign":
                     actions.append({"type": "assign", "key": action["key"], "value": action["value"]})
                 elif action_type == "xbtn":
@@ -123,3 +122,13 @@ def replace_variables(var_name, state):
     # Если переменная не найдена, возвращаем "False" (предмета нет)
     print(f"helper | variable didn't found")
     return "False"
+
+def replace_variables_in_text(text, state):
+    """Заменяет переменные в тексте, заключенные в #Variable$"""
+    def replace_match(match):
+        var_name = match.group(1)  # Извлекаем имя переменной без #
+        if var_name in state["characteristics"]:
+            return str(state["characteristics"][var_name]["value"])
+        return "0"  # Если переменной нет, подставляем 0
+
+    return re.sub(r"#([A-Za-zА-Яа-я0-9_]+)\$", replace_match, text)
