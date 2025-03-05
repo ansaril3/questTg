@@ -86,13 +86,21 @@ def send_chapter(chat_id):
 
     send_options_keyboard(chat_id, chapter)
 
-# Отправка клавиатуры с кнопками, учитывая условия
 def send_options_keyboard(chat_id, chapter):
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
     state = load_state(chat_id)
 
     # Стандартные кнопки из options
     buttons = [types.KeyboardButton(option) for option in chapter["options"].keys()]
+
+    # Проверяем xbtn в корне главы
+    if "xbtn" in chapter:
+        xbtn = chapter["xbtn"]
+        buttons.append(types.KeyboardButton(xbtn["text"]))
+        chapter["options"][xbtn["text"]] = {  
+            "target": xbtn["target"],  
+            "actions": xbtn["actions"]  
+        }  # ✅ Сохраняем actions
 
     # Проверяем условия из "conditions"
     condition_buttons = []
@@ -111,11 +119,11 @@ def send_options_keyboard(chat_id, chapter):
         for action in condition_actions:
             print(f"handler | action: {action}")
             if action["type"] == "goto":
-                state["chapter"] = action["target"]  # Устанавливаем новую главу
-                save_state(chat_id, state)  # Сохраняем обновленное состояние
-                send_chapter(chat_id)  # Немедленно загружаем новую главу
-                return 
-            
+                state["chapter"] = action["target"]
+                save_state(chat_id, state)
+                send_chapter(chat_id)
+                return  
+
             elif action["type"] == "pln":
                 if isinstance(action["text"], str):  # ✅ Проверяем, что это строка
                     processed_text = replace_variables_in_text(action["text"], state)
@@ -127,19 +135,13 @@ def send_options_keyboard(chat_id, chapter):
 
             elif action["type"] == "assign":
                 key, value = action["key"], action["value"]
-                # Получаем текущее значение характеристики (если нет - берем 0)
                 current_value = state["characteristics"].get(key, {"value": 0})["value"]
-                # Подготавливаем локальный контекст для eval (используем характеристики из state)
                 local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
                 try:
-                    # Если value - число, присваиваем его напрямую
-                    if value.isdigit():
-                        new_value = int(value)
-                    else:
-                        new_value = eval(value, {}, local_vars)  # Выполняем выражение в безопасном окружении
+                    new_value = int(value) if value.isdigit() else eval(value, {}, local_vars)
                 except Exception as e:
                     print(f"Ошибка в assign: {e}")
-                    new_value = current_value  # Если ошибка, оставляем старое значение
+                    new_value = current_value  
 
                 state["characteristics"][key] = {
                     "name": state["characteristics"].get(key, {"name": key})["name"],
@@ -178,10 +180,30 @@ def handle_choice(message):
     if message.text in chapter["options"]:
         option_data = chapter["options"][message.text]
 
-        # Если это xbtn - выполняем inv_action перед переходом
-        if isinstance(option_data, dict) and "inv_action" in option_data:
-            process_inventory_action(state, option_data["inv_action"])  # ✅ Выполняем inv_action
+        # Если это xbtn - выполняем actions перед переходом
+        if isinstance(option_data, dict) and "actions" in option_data:
+            for action in option_data["actions"]:
+                if action["type"] == "inv+":
+                    process_inventory_action(state, f"Inv+ {action['item']}")
+                elif action["type"] == "inv-":
+                    process_inventory_action(state, f"Inv- {action['item']}")
+                elif action["type"] == "assign":
+                    key, value = action["key"], action["value"]
+                    current_value = state["characteristics"].get(key, {"value": 0})["value"]
+                    local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
+                    try:
+                        new_value = int(value) if value.isdigit() else eval(value, {}, local_vars)
+                    except Exception as e:
+                        print(f"Ошибка в assign: {e}")
+                        new_value = current_value  
+
+                    state["characteristics"][key] = {
+                        "name": state["characteristics"].get(key, {"name": key})["name"],
+                        "value": new_value,
+                    }
+
             state["chapter"] = option_data["target"]
+
         else:
             state["chapter"] = option_data
 
