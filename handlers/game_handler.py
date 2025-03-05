@@ -72,6 +72,8 @@ def send_chapter(chat_id):
     save_state(chat_id, state)
 
     chapter_text = replace_variables_in_text(chapter["text"], state)
+    if chapter_text == "": 
+        chapter_text = '.'
     bot.send_message(chat_id, chapter_text)
     # 📷 Отправляем изображение, если есть
     if "image" in chapter:
@@ -117,6 +119,8 @@ def send_options_keyboard(chat_id, chapter):
             elif action["type"] == "pln":
                 if isinstance(action["text"], str):  # ✅ Проверяем, что это строка
                     processed_text = replace_variables_in_text(action["text"], state)
+                    if processed_text == "": 
+                        processed_text = '.'
                     bot.send_message(chat_id, processed_text)
                 else:
                     print(f"Ошибка: ожидалась строка, но получено {type(action['text'])}")
