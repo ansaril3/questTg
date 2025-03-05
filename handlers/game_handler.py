@@ -104,8 +104,6 @@ def send_options_keyboard(chat_id, chapter):
             # ✅ Сохраняем возможные переходы в options
             chapter["options"][btn["text"]] = btn["target"]
 
-        print(f"handler | condition_actions: {condition_actions}")
-
         # Выполняем действия из условий
         for action in condition_actions:
             print(f"handler | action: {action}")

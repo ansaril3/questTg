@@ -51,7 +51,10 @@ def check_conditions(state, conditions):
                     actions.append({"type": "assign", "key": action["key"], "value": action["value"]})
                 elif action_type == "xbtn":
                     actions.append({"type": "xbtn", "target": action["target"], "inv_action": action["inv_action"], "text": action["text"]})
-                
+                elif action_type == "inv+":
+                    process_inventory_action(state, f"Inv+ {action['item']}")  # ✅ Добавляем предмет в инвентарь
+                elif action_type == "inv-":
+                    process_inventory_action(state, f"Inv- {action['item']}")  # ✅ Удаляем предмет из инвентаря
                 # Обработка действий с инвентарём
                 if "inv_action" in action:
                     process_inventory_action(state, action["inv_action"])
@@ -61,6 +64,7 @@ def check_conditions(state, conditions):
 # Обработка инвентарных действий (Inv+ / Inv- / Invkill)
 def process_inventory_action(state, action):
     action_type, item = action.split(" ", 1)
+    print(f"inventory change: action_type = {action_type}, item = {item} ")
     if action_type.lower() == "inv+":
         if item not in state["inventory"]:
             state["inventory"].append(item)
