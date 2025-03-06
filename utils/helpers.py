@@ -25,7 +25,6 @@ def calculate_characteristic(expression, state):
     
     return total
 
-
 def check_conditions(state, conditions):
     buttons = []
     actions = []
@@ -34,28 +33,34 @@ def check_conditions(state, conditions):
         condition = condition_block["condition"]
         actions_list = condition_block["actions"]
         print(f"helper | check_conditions | condition: {condition}")
-        #print(f"helper | actions_list: {actions_list}")
-        if evaluate_condition(state, condition):  # Проверяем, выполняется ли условие
+
+        if evaluate_condition(state, condition):
             print("helper | check_conditions | condition is true")
             for action in actions_list:
-                print(f"helper | check_conditions | action: {action}")
                 action_type = action["type"]
+                print(f"helper | check_conditions | action: {action}, type: {action_type}")
+
                 if action_type == "btn":
                     buttons.append({"target": action["target"], "text": action["text"]})
+
                 elif action_type == "goto":
                     actions.append({"type": "goto", "target": action["target"]})
+
                 elif action_type == "pln":
                     actions.append({"type": "pln", "text": action["text"]})
+
                 elif action_type == "assign":
                     actions.append({"type": "assign", "key": action["key"], "value": action["value"]})
+
                 elif action_type == "xbtn":
-                    actions.append({"type": "xbtn", "target": action["target"], "inv_action": action["inv_action"], "text": action["text"]})
+                    buttons.append({"text": action["text"], "target": action["target"], "actions": action["actions"]})
+               
                 elif action_type == "inv+":
-                    process_inventory_action(state, f"Inv+ {action['item']}")  # ✅ Добавляем предмет в инвентарь
+                    process_inventory_action(state, f"inv+ {action['item']}")  # ✅ Добавляем предмет в инвентарь
                 elif action_type == "inv-":
-                    process_inventory_action(state, f"Inv- {action['item']}")  # ✅ Удаляем предмет из инвентаря
+                    process_inventory_action(state, f"inv- {action['item']}")  # ✅ Удаляем предмет из инвентаря
                 # Обработка действий с инвентарём
-                if "inv_action" in action:
+                if "inv_action" in action and action_type != "xbtn":
                     process_inventory_action(state, action["inv_action"])
 
     return buttons, actions

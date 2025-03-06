@@ -112,8 +112,12 @@ def send_options_keyboard(chat_id, chapter):
         # Добавляем кнопки из условий
         for btn in condition_buttons:
             buttons.append(types.KeyboardButton(btn["text"]))
-            # ✅ Сохраняем возможные переходы в options
-            chapter["options"][btn["text"]] = btn["target"]
+            chapter["options"][btn["text"]] = {  
+                "target": btn["target"],  
+                "actions": btn["actions"]  
+            }  # ✅ Исправлено! Сохраняем actions
+
+        print(f"handler | condition_actions: {condition_actions}")
 
         # Выполняем действия из условий
         for action in condition_actions:
@@ -148,14 +152,6 @@ def send_options_keyboard(chat_id, chapter):
                     "value": new_value,
                 }
 
-            elif action["type"] == "xbtn":
-                buttons.append(types.KeyboardButton(action["text"]))
-                chapter["options"][action["text"]] = {
-                    "target": action["target"],
-                    "inv_action": action["inv_action"]
-                }  # ✅ Сохраняем inv_action в options
-
-    # Сохраняем обновлённое состояние
     save_state(chat_id, state)
 
     # Добавляем основные кнопки
@@ -180,9 +176,11 @@ def handle_choice(message):
     if message.text in chapter["options"]:
         option_data = chapter["options"][message.text]
 
-        # Если это xbtn - выполняем actions перед переходом
+        # ✅ Исправлено! Теперь actions корректно выполняются перед переходом
         if isinstance(option_data, dict) and "actions" in option_data:
             for action in option_data["actions"]:
+                print(f"handler | executing action: {action}")
+
                 if action["type"] == "inv+":
                     process_inventory_action(state, f"Inv+ {action['item']}")
                 elif action["type"] == "inv-":
@@ -202,6 +200,7 @@ def handle_choice(message):
                         "value": new_value,
                     }
 
+            # ✅ Устанавливаем новую главу только после выполнения действий
             state["chapter"] = option_data["target"]
 
         else:
