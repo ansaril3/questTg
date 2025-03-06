@@ -14,7 +14,8 @@ def show_characteristics(message):
         bot.send_message(chat_id, "📊 У вас пока нет характеристик.")
     else:
         char_text = "\n".join(
-            f"{char.get('name', key)}: {char['value']}" for key, char in state["characteristics"].items()
+            f"{char.get('name', key) if char.get('name') else key}: {char['value']}"
+            for key, char in state["characteristics"].items()
         )
         bot.send_message(chat_id, f"📊 Ваши характеристики:\n{char_text}")
 
