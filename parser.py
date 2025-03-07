@@ -61,7 +61,7 @@ def parse_input_to_json(input_path):
                 if "then" in line_lower:
                     condition_part, actions_part = re.split(r'\bthen\b', line, flags=re.IGNORECASE, maxsplit=1)
                     condition = condition_part[3:].strip()  # Убираем "if" и лишние пробелы
-                    actions = [action.strip() for action in actions_part.split('&')]  # Разделяем действия по "&"
+                    actions = [action.strip() for action in re.split(r'\s*&\s*', actions_part)]  # Разделяем действия по "&"
 
                     parsed_actions = []
                     for action in actions:
