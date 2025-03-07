@@ -82,8 +82,14 @@ def process_inventory_action(state, action):
 def evaluate_condition(state, condition):
     print(f"helper | condition input: {condition}")
 
-    # Заменяем `=` на `==` для корректной Python-логики
-    condition = condition.replace("=", "==").replace(" and ", " && ").replace(" or ", " || ")
+    # Сначала обрабатываем сложные операторы (>=, <=, !=), чтобы не ломать их при замене '='
+    condition = condition.replace(">=", "⩾").replace("<=", "⩽").replace("!=", "≠")
+    
+    # Заменяем одиночный `=` на `==`
+    condition = condition.replace("=", "==")
+
+    # Восстанавливаем операторы обратно
+    condition = condition.replace("⩾", ">=").replace("⩽", "<=").replace("≠", "!=")
 
     # Обрабатываем переменные, избегая чисел и составных названий предметов
     def replace_variables_safe(match):

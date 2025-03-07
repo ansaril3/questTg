@@ -142,13 +142,8 @@ def send_options_keyboard(chat_id, chapter):
         # Выполняем действия из условий
         for action in condition_actions:
             print(f"handler | action: {action}")
-            if action["type"] == "goto":
-                state["chapter"] = action["target"]
-                save_state(chat_id, state)
-                send_chapter(chat_id)
-                return  
 
-            elif action["type"] == "pln":
+            if action["type"] == "pln":
                 if isinstance(action["text"], str):  # ✅ Проверяем, что это строка
                     processed_text = replace_variables_in_text(action["text"], state)
                     if processed_text == "": 
@@ -171,6 +166,12 @@ def send_options_keyboard(chat_id, chapter):
                     "name": state["characteristics"].get(key, {"name": key})["name"],
                     "value": new_value,
                 }
+                
+            elif action["type"] == "goto":
+                state["chapter"] = action["target"]
+                save_state(chat_id, state)
+                send_chapter(chat_id)
+                return  
 
     save_state(chat_id, state)
 
