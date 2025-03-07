@@ -45,9 +45,14 @@ def parse_input_to_json(input_path):
                     if "remove_items" not in json_data[chapter_id]:
                         json_data[chapter_id]["remove_items"] = []
                     json_data[chapter_id]["remove_items"].append(line[5:].strip())
-            elif line.lower().startswith('goto '):
-                goto_value = line[5:].strip()  # Извлекаем значение после "GoTo"
-                json_data[chapter_id]["options"] = {"->": goto_value}
+            elif line.lower().startswith('goto '):  # Обработка строк, начинающихся с "goto"
+                goto_value = line[5:].strip()  # Извлекаем значение после "goto"
+                if "actions" not in json_data[chapter_id]:
+                    json_data[chapter_id]["actions"] = []
+                json_data[chapter_id]["actions"].append({
+                    "type": "goto",
+                    "target": goto_value
+                })
             elif line.lower().startswith('if '):  # Обработка строк, начинающихся с "if"
                 if "then" in line.lower():
                     condition_part, actions_part = re.split(r'\bthen\b', line, flags=re.IGNORECASE, maxsplit=1)
