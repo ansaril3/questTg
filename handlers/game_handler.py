@@ -46,20 +46,26 @@ def send_chapter(chat_id):
         bot.send_message(chat_id, "Ошибка: глава не найдена.")
         return
 
+   
+    
+    # Обновление характеристик
     update_characteristics(state, chapter)
 
+    # Добавление предметов в инвентарь
     if "add_items" in chapter:
         for item in chapter["add_items"]:
             if item not in state["inventory"]:
                 state["inventory"].append(item)
                 print(f"handler | add item: {item}")
     
+    # Удаление предметов из инвентаря
     if "remove_items" in chapter:
         for item in chapter["remove_items"]:
             if item in state["inventory"]:
                 state["inventory"].remove(item)
                 print(f"handler | remove item: {item}")
 
+    # Добавление и удаление золота
     if "add_gold" in chapter:
         state["gold"] += chapter["add_gold"]
         print(f"handler | add gold: {chapter['add_gold']}")
@@ -84,7 +90,21 @@ def send_chapter(chat_id):
         else:
             bot.send_message(chat_id, f"⚠️ Изображение не найдено: {chapter['image']}")
 
+     # 🔥 Проверяем наличие массива actions в главе
+    if "actions" in chapter and isinstance(chapter["actions"], list):
+        for action in chapter["actions"]:
+            if action["type"] == "goto":
+                target = action.get("target")
+                if target and target in chapters:
+                    print(f"✅ Выполняем автоматический переход на главу {target}")
+                    state["chapter"] = target
+                    save_state(chat_id, state)
+                    send_chapter(chat_id)  # Рекурсивно вызываем отправку новой главы
+                    return
+                
+    # Отправка кнопок из options
     send_options_keyboard(chat_id, chapter)
+
 
 def send_options_keyboard(chat_id, chapter):
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
