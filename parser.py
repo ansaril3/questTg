@@ -15,19 +15,20 @@ def parse_input_to_json(input_path):
         json_data[chapter_id] = {"text": "", "options": {}}
 
         for line in lines[1:]:
-            # Игнорируем строки, начинающиеся с ;CLS или Pause
-            if line.startswith(';CLS') or line.startswith('Pause'):
+            line_lower = line.lower()  # Приводим строку к нижнему регистру для проверки
+            # Игнорируем строки, начинающиеся с ; (комментарии)
+            if line.strip().startswith(';') or line.startswith('Pause'):
                 continue  # Пропускаем такие строки
-            elif line.startswith('PLN'):
+            elif line_lower.startswith('pln'):  # PLN (регистронезависимо)
                 json_data[chapter_id]["text"] += line[4:].strip() + " "
-            elif line.startswith('BTN'):
+            elif line_lower.startswith('btn'):  # BTN (регистронезависимо)
                 parts = line[4:].split(',', 1)  # Разделяем только по первой запятой
                 if len(parts) == 2:
                     json_data[chapter_id]["options"][parts[1].strip()] = parts[0].strip()
                 else:
                     rest_data.append(f"{chapter_id}: {line}")
-            elif line.lower().startswith('inv+'):
-                if 'Золотых монет' in line:
+            elif line_lower.startswith('inv+'):  # Inv+ (регистронезависимо)
+                if 'золотых монет' in line_lower:  # Проверка на "золотых монет" (регистронезависимо)
                     amount = re.findall(r'\d+', line)
                     if amount:
                         if "add_gold" not in json_data[chapter_id]:
@@ -37,8 +38,8 @@ def parse_input_to_json(input_path):
                     if "add_items" not in json_data[chapter_id]:
                         json_data[chapter_id]["add_items"] = []
                     json_data[chapter_id]["add_items"].append(line[5:].strip())
-            elif line.lower().startswith('inv-'):
-                if 'Золотых монет' in line:
+            elif line_lower.startswith('inv-'):  # Inv- (регистронезависимо)
+                if 'золотых монет' in line_lower:  # Проверка на "золотых монет" (регистронезависимо)
                     amount = re.findall(r'\d+', line)
                     if amount:
                         if "remove_gold" not in json_data[chapter_id]:
@@ -48,7 +49,7 @@ def parse_input_to_json(input_path):
                     if "remove_items" not in json_data[chapter_id]:
                         json_data[chapter_id]["remove_items"] = []
                     json_data[chapter_id]["remove_items"].append(line[5:].strip())
-            elif line.lower().startswith('goto '):  # Обработка строк, начинающихся с "goto"
+            elif line_lower.startswith('goto '):  # Goto (регистронезависимо)
                 goto_value = line[5:].strip()  # Извлекаем значение после "goto"
                 if "actions" not in json_data[chapter_id]:
                     json_data[chapter_id]["actions"] = []
@@ -56,31 +57,32 @@ def parse_input_to_json(input_path):
                     "type": "goto",
                     "target": goto_value
                 })
-            elif line.lower().startswith('if '):  # Обработка строк, начинающихся с "if"
-                if "then" in line.lower():
+            elif line_lower.startswith('if '):  # If (регистронезависимо)
+                if "then" in line_lower:
                     condition_part, actions_part = re.split(r'\bthen\b', line, flags=re.IGNORECASE, maxsplit=1)
                     condition = condition_part[3:].strip()  # Убираем "if" и лишние пробелы
                     actions = [action.strip() for action in actions_part.split('&')]  # Разделяем действия по "&"
 
                     parsed_actions = []
                     for action in actions:
-                        if action.lower().startswith('btn'):
+                        action_lower = action.lower()  # Приводим действие к нижнему регистру
+                        if action_lower.startswith('btn'):
                             parts = action[4:].split(',', 1)
                             if len(parts) == 2:
                                 parsed_actions.append({"type": "btn", "target": parts[0].strip(), "text": parts[1].strip()})
-                        elif action.lower().startswith('goto'):
+                        elif action_lower.startswith('goto'):
                             target = action[5:].strip()
                             parsed_actions.append({"type": "goto", "target": target})
-                        elif action.lower().startswith('pln'):
+                        elif action_lower.startswith('pln'):
                             text = action[4:].strip()
                             parsed_actions.append({"type": "pln", "text": text})
-                        elif action.lower().startswith('inv+'):
+                        elif action_lower.startswith('inv+'):
                             item = action[5:].strip()
                             parsed_actions.append({"type": "inv+", "item": item})
-                        elif action.lower().startswith('inv-'):
+                        elif action_lower.startswith('inv-'):
                             item = action[5:].strip()
                             parsed_actions.append({"type": "inv-", "item": item})
-                        elif action.lower().startswith('xbtn'):  # Обработка XBTN внутри if
+                        elif action_lower.startswith('xbtn'):  # Обработка XBTN внутри if
                             parts = [part.strip() for part in action[5:].split(',')]  # Разделяем по запятым
                             if len(parts) >= 2:
                                 target = parts[0]  # Первая часть — целевое поле
@@ -89,10 +91,11 @@ def parse_input_to_json(input_path):
 
                                 parsed_xbtn_actions = []
                                 for act in actions_xbtn:
-                                    if act.lower().startswith('inv+'):
+                                    act_lower = act.lower()  # Приводим действие к нижнему регистру
+                                    if act_lower.startswith('inv+'):
                                         item = act[5:].strip()
                                         parsed_xbtn_actions.append({"type": "inv+", "item": item})
-                                    elif act.lower().startswith('inv-'):
+                                    elif act_lower.startswith('inv-'):
                                         item = act[5:].strip()
                                         parsed_xbtn_actions.append({"type": "inv-", "item": item})
                                     elif '=' in act:  # Обработка присваивания значений
@@ -121,7 +124,7 @@ def parse_input_to_json(input_path):
                     })
                 else:
                     rest_data.append(f"{chapter_id}: {line}")
-            elif line.lower().startswith('xbtn'):  # Обработка XBTN в начале строки
+            elif line_lower.startswith('xbtn'):  # XBTN (регистронезависимо)
                 parts = [part.strip() for part in line[5:].split(',')]  # Разделяем по запятым
                 if len(parts) >= 2:
                     target = parts[0]  # Первая часть — целевое поле
@@ -130,10 +133,11 @@ def parse_input_to_json(input_path):
 
                     parsed_actions = []
                     for action in actions:
-                        if action.lower().startswith('inv+'):
+                        action_lower = action.lower()  # Приводим действие к нижнему регистру
+                        if action_lower.startswith('inv+'):
                             item = action[5:].strip()
                             parsed_actions.append({"type": "inv+", "item": item})
-                        elif action.lower().startswith('inv-'):
+                        elif action_lower.startswith('inv-'):
                             item = action[5:].strip()
                             parsed_actions.append({"type": "inv-", "item": item})
                         elif '=' in action:  # Обработка присваивания значений
@@ -150,7 +154,7 @@ def parse_input_to_json(input_path):
                     }
                 else:
                     rest_data.append(f"{chapter_id}: {line}")
-            elif line.lower().startswith('image'):  # Обработка строк, начинающихся с "Image"
+            elif line_lower.startswith('image'):  # Image (регистронезависимо)
                 image_value = line.split('=', 1)[1].strip().strip('"')  # Извлекаем значение после "=" и убираем кавычки
                 image_value = image_value.replace('\\', '/')  # Заменяем двойные слеши на одинарные
                 json_data[chapter_id]["image"] = image_value
