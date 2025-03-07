@@ -15,7 +15,10 @@ def parse_input_to_json(input_path):
         json_data[chapter_id] = {"text": "", "options": {}}
 
         for line in lines[1:]:
-            if line.startswith('PLN'):
+            # Игнорируем строки, начинающиеся с ;CLS или Pause
+            if line.startswith(';CLS') or line.startswith('Pause'):
+                continue  # Пропускаем такие строки
+            elif line.startswith('PLN'):
                 json_data[chapter_id]["text"] += line[4:].strip() + " "
             elif line.startswith('BTN'):
                 parts = line[4:].split(',', 1)  # Разделяем только по первой запятой
