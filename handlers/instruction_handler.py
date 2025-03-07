@@ -4,19 +4,32 @@ from config import bot, instructions, first_instruction, chapters
 from utils.state_manager import load_state, save_state
 from handlers.game_handler import send_chapter
 import telebot.types as types
+import os
+
+DATA_DIR = "data"  # 📂 Папка с изображениями
 
 # Отправка раздела инструкции
 def send_instruction(chat_id):
+    """Отправляет инструкцию с текстом, кнопками и изображением (если есть)."""
     state = load_state(chat_id)
-    instruction_key = state["instruction"]
+    instruction_key = state.get("instruction")
     instruction = instructions.get(instruction_key)
 
     if not instruction:
         bot.send_message(chat_id, "Ошибка: раздел инструкции не найден.")
         return
 
-    bot.send_message(chat_id, instruction["text"])
-    send_instruction_keyboard(chat_id, instruction)
+    # 📷 Отправляем изображение, если есть
+    if "image" in instruction:
+        image_path = DATA_DIR + instruction["image"].replace("\\", "/")
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as photo:
+                bot.send_photo(chat_id, photo)
+        else:
+            bot.send_message(chat_id, f"⚠️ Изображение не найдено: {instruction['image']}")
+
+    bot.send_message(chat_id, instruction["text"])  # Отправляем текст инструкции
+    send_instruction_keyboard(chat_id, instruction)  # Отправляем кнопки
 
 
 # Отправка клавиатуры для инструкции
