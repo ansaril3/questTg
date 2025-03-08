@@ -134,8 +134,8 @@ def send_options_keyboard(chat_id, chapter):
             buttons.append(types.KeyboardButton(btn["text"]))
             chapter["options"][btn["text"]] = {  
                 "target": btn["target"],  
-                "actions": btn["actions"]  
-            }  # ✅ Исправлено! Сохраняем actions
+                "actions": btn.get("actions", [])  # ✅ Если нет actions, используем пустой список
+            }
 
         print(f"handler | condition_actions: {condition_actions}")
 
