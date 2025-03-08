@@ -169,29 +169,15 @@ def parse_assign_action(line):
         key = key_value[0].strip()
         value = key_value[1].strip()
 
-        # Проверяем, содержит ли значение арифметическое выражение
-        if re.search(r'[\+\-\*/]', value):  # Если есть +, -, *, /
-            # Обрабатываем арифметическое выражение
-            return {
-                "type": "assign",
-                "value": {
-                    "key": key,
-                    "value": value,  # Сохраняем выражение как строку
-                    "name": "",
-                    "is_expression": True  # Добавляем флаг, что это выражение
-                }
+        # Возвращаем объект присваивания
+        return {
+            "type": "assign",
+            "value": {
+                "key": key,
+                "value": value,  # Сохраняем значение как строку
+                "name": ""  # Дополнительное поле (если нужно)
             }
-        else:
-            # Обычное присваивание
-            return {
-                "type": "assign",
-                "value": {
-                    "key": key,
-                    "value": value,
-                    "name": "",
-                    "is_expression": False  # Это не выражение
-                }
-            }
+        }
     else:
         return None  # Если нет '=', это не присваивание
 
