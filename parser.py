@@ -9,6 +9,17 @@ def parse_input_to_json(input_path):
     json_data = {}
     rest_data = []
 
+    # Шаг 1: Собираем список используемых предметов
+    usable_items = set()
+    for chapter in chapters:
+        lines = chapter.strip().split('\n')
+        chapter_id = lines[0].strip(':')
+        if chapter_id.lower().startswith('use_'):  # Если глава начинается с :Use_
+            item_name = chapter_id[4:]  # Извлекаем название предмета (после :Use_)
+            usable_items.add(item_name)
+            print(f"usable item = {item_name}")
+
+    # Шаг 2: Обрабатываем главы и добавляем метку [usable] к используемым предметам
     for chapter in chapters:
         lines = chapter.strip().split('\n')
         chapter_id = lines[0].strip(':')
@@ -37,7 +48,11 @@ def parse_input_to_json(input_path):
                 else:
                     if "add_items" not in json_data[chapter_id]:
                         json_data[chapter_id]["add_items"] = []
-                    json_data[chapter_id]["add_items"].append(line[5:].strip())
+                    item = line[5:].strip()
+                    # Добавляем метку [usable], если предмет используется
+                    if item in usable_items:
+                        item += "[usable]"
+                    json_data[chapter_id]["add_items"].append(item)
             elif line_lower.startswith('inv-'):  # Inv- (регистронезависимо)
                 if 'золотых монет' in line_lower:  # Проверка на "золотых монет" (регистронезависимо)
                     amount = re.findall(r'\d+', line)
@@ -48,7 +63,11 @@ def parse_input_to_json(input_path):
                 else:
                     if "remove_items" not in json_data[chapter_id]:
                         json_data[chapter_id]["remove_items"] = []
-                    json_data[chapter_id]["remove_items"].append(line[5:].strip())
+                    item = line[5:].strip()
+                    # Добавляем метку [usable], если предмет используется
+                    if item in usable_items:
+                        item += "[usable]"
+                    json_data[chapter_id]["remove_items"].append(item)
             elif line_lower.startswith('goto '):  # Goto (регистронезависимо)
                 goto_value = line[5:].strip()  # Извлекаем значение после "goto"
                 if "actions" not in json_data[chapter_id]:
@@ -78,9 +97,15 @@ def parse_input_to_json(input_path):
                             parsed_actions.append({"type": "pln", "text": text})
                         elif action_lower.startswith('inv+'):
                             item = action[5:].strip()
+                            # Добавляем метку [usable], если предмет используется
+                            if item in usable_items:
+                                item += "[usable]"
                             parsed_actions.append({"type": "inv+", "item": item})
                         elif action_lower.startswith('inv-'):
                             item = action[5:].strip()
+                            # Добавляем метку [usable], если предмет используется
+                            if item in usable_items:
+                                item += "[usable]"
                             parsed_actions.append({"type": "inv-", "item": item})
                         elif action_lower.startswith('xbtn'):  # Обработка XBTN внутри if
                             parts = [part.strip() for part in action[5:].split(',')]  # Разделяем по запятым
@@ -94,9 +119,15 @@ def parse_input_to_json(input_path):
                                     act_lower = act.lower()  # Приводим действие к нижнему регистру
                                     if act_lower.startswith('inv+'):
                                         item = act[5:].strip()
+                                        # Добавляем метку [usable], если предмет используется
+                                        if item in usable_items:
+                                            item += "[usable]"
                                         parsed_xbtn_actions.append({"type": "inv+", "item": item})
                                     elif act_lower.startswith('inv-'):
                                         item = act[5:].strip()
+                                        # Добавляем метку [usable], если предмет используется
+                                        if item in usable_items:
+                                            item += "[usable]"
                                         parsed_xbtn_actions.append({"type": "inv-", "item": item})
                                     elif '=' in act:  # Обработка присваивания значений
                                         key, value = act.split('=', 1)
@@ -136,9 +167,15 @@ def parse_input_to_json(input_path):
                         action_lower = action.lower()  # Приводим действие к нижнему регистру
                         if action_lower.startswith('inv+'):
                             item = action[5:].strip()
+                            # Добавляем метку [usable], если предмет используется
+                            if item in usable_items:
+                                item += "[usable]"
                             parsed_actions.append({"type": "inv+", "item": item})
                         elif action_lower.startswith('inv-'):
                             item = action[5:].strip()
+                            # Добавляем метку [usable], если предмет используется
+                            if item in usable_items:
+                                item += "[usable]"
                             parsed_actions.append({"type": "inv-", "item": item})
                         elif '=' in action:  # Обработка присваивания значений
                             key, value = action.split('=', 1)
