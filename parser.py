@@ -7,7 +7,6 @@ def parse_input_to_json(input_path):
 
     chapters = content.split('End')[:-1]
     json_data = {}
-    rest_data = []
 
     # Шаг 1: Собираем список используемых предметов
     usable_items = set()
@@ -17,97 +16,140 @@ def parse_input_to_json(input_path):
         if chapter_id.lower().startswith('use_'):  # Если глава начинается с :Use_
             item_name = chapter_id[4:]  # Извлекаем название предмета (после :Use_)
             usable_items.add(item_name)
-            print(f"usable item = {item_name}")
 
     # Шаг 2: Обрабатываем главы и добавляем метку [usable] к используемым предметам
     for chapter in chapters:
         lines = chapter.strip().split('\n')
         chapter_id = lines[0].strip(':')
-        json_data[chapter_id] = {"text": "", "options": {}}
+        actions = []
 
         for line in lines[1:]:
             line_lower = line.lower()  # Приводим строку к нижнему регистру для проверки
             # Игнорируем строки, начинающиеся с ; (комментарии)
             if line.strip().startswith(';') or line.startswith('Pause'):
                 continue  # Пропускаем такие строки
-            elif line_lower.startswith('pln'):  # PLN (регистронезависимо)
-                json_data[chapter_id]["text"] += line[4:].strip() + " "
-            elif line_lower.startswith('btn'):  # BTN (регистронезависимо)
+
+            # Обработка PLN (текст)
+            elif line_lower.startswith('pln'):
+                actions.append({
+                    "type": "text",
+                    "value": line[4:].strip()
+                })
+
+            # Обработка BTN (кнопка)
+            elif line_lower.startswith('btn'):
                 parts = line[4:].split(',', 1)  # Разделяем только по первой запятой
                 if len(parts) == 2:
-                    json_data[chapter_id]["options"][parts[1].strip()] = parts[0].strip()
+                    actions.append({
+                        "type": "btn",
+                        "value": {
+                            "text": parts[1].strip(),
+                            "target": parts[0].strip()
+                        }
+                    })
                 else:
-                    rest_data.append(f"{chapter_id}: {line}")
-            elif line_lower.startswith('inv+'):  # Inv+ (регистронезависимо)
-                if 'золотых монет' in line_lower:  # Проверка на "золотых монет" (регистронезависимо)
+                    actions.append({
+                        "type": "unknown",
+                        "value": line
+                    })
+
+            # Обработка Inv+ (добавление в инвентарь)
+            elif line_lower.startswith('inv+'):
+                if 'золотых монет' in line_lower:  # Проверка на "золотых монет"
                     amount = re.findall(r'\d+', line)
                     if amount:
-                        if "add_gold" not in json_data[chapter_id]:
-                            json_data[chapter_id]["add_gold"] = 0
-                        json_data[chapter_id]["add_gold"] += int(amount[0])
+                        actions.append({
+                            "type": "gold",
+                            "value": f"+{amount[0]}"
+                        })
                 else:
-                    if "add_items" not in json_data[chapter_id]:
-                        json_data[chapter_id]["add_items"] = []
                     item = line[5:].strip()
                     # Добавляем метку [usable], если предмет используется
                     if item in usable_items:
                         item += "[usable]"
-                    json_data[chapter_id]["add_items"].append(item)
-            elif line_lower.startswith('inv-'):  # Inv- (регистронезависимо)
-                if 'золотых монет' in line_lower:  # Проверка на "золотых монет" (регистронезависимо)
+                    actions.append({
+                        "type": "inventory",
+                        "value": f"inv+{item}"
+                    })
+
+            # Обработка Inv- (удаление из инвентаря)
+            elif line_lower.startswith('inv-'):
+                if 'золотых монет' in line_lower:  # Проверка на "золотых монет"
                     amount = re.findall(r'\d+', line)
                     if amount:
-                        if "remove_gold" not in json_data[chapter_id]:
-                            json_data[chapter_id]["remove_gold"] = 0
-                        json_data[chapter_id]["remove_gold"] += int(amount[0])
+                        actions.append({
+                            "type": "gold",
+                            "value": f"-{amount[0]}"
+                        })
                 else:
-                    if "remove_items" not in json_data[chapter_id]:
-                        json_data[chapter_id]["remove_items"] = []
                     item = line[5:].strip()
                     # Добавляем метку [usable], если предмет используется
                     if item in usable_items:
                         item += "[usable]"
-                    json_data[chapter_id]["remove_items"].append(item)
-            elif line_lower.startswith('goto '):  # Goto (регистронезависимо)
+                    actions.append({
+                        "type": "inventory",
+                        "value": f"inv-{item}"
+                    })
+
+            # Обработка Goto (переход)
+            elif line_lower.startswith('goto '):
                 goto_value = line[5:].strip()  # Извлекаем значение после "goto"
-                if "actions" not in json_data[chapter_id]:
-                    json_data[chapter_id]["actions"] = []
-                json_data[chapter_id]["actions"].append({
+                actions.append({
                     "type": "goto",
-                    "target": goto_value
+                    "value": goto_value
                 })
-            elif line_lower.startswith('if '):  # If (регистронезависимо)
+
+            # Обработка If (условие)
+            elif line_lower.startswith('if '):
                 if "then" in line_lower:
                     condition_part, actions_part = re.split(r'\bthen\b', line, flags=re.IGNORECASE, maxsplit=1)
                     condition = condition_part[3:].strip()  # Убираем "if" и лишние пробелы
-                    actions = [action.strip() for action in re.split(r'\s*&\s*', actions_part)]  # Разделяем действия по "&"
+                    actions_list = [action.strip() for action in re.split(r'\s*&\s*', actions_part)]  # Разделяем действия по "&"
 
                     parsed_actions = []
-                    for action in actions:
+                    for action in actions_list:
                         action_lower = action.lower()  # Приводим действие к нижнему регистру
                         if action_lower.startswith('btn'):
                             parts = action[4:].split(',', 1)
                             if len(parts) == 2:
-                                parsed_actions.append({"type": "btn", "target": parts[0].strip(), "text": parts[1].strip()})
+                                parsed_actions.append({
+                                    "type": "btn",
+                                    "value": {
+                                        "text": parts[1].strip(),
+                                        "target": parts[0].strip()
+                                    }
+                                })
                         elif action_lower.startswith('goto'):
                             target = action[5:].strip()
-                            parsed_actions.append({"type": "goto", "target": target})
+                            parsed_actions.append({
+                                "type": "goto",
+                                "value": target
+                            })
                         elif action_lower.startswith('pln'):
                             text = action[4:].strip()
-                            parsed_actions.append({"type": "pln", "text": text})
+                            parsed_actions.append({
+                                "type": "text",
+                                "value": text
+                            })
                         elif action_lower.startswith('inv+'):
                             item = action[5:].strip()
                             # Добавляем метку [usable], если предмет используется
                             if item in usable_items:
                                 item += "[usable]"
-                            parsed_actions.append({"type": "inv+", "item": item})
+                            parsed_actions.append({
+                                "type": "inventory",
+                                "value": f"inv+{item}"
+                            })
                         elif action_lower.startswith('inv-'):
                             item = action[5:].strip()
                             # Добавляем метку [usable], если предмет используется
                             if item in usable_items:
                                 item += "[usable]"
-                            parsed_actions.append({"type": "inv-", "item": item})
-                        elif action_lower.startswith('xbtn'):  # Обработка XBTN внутри if
+                            parsed_actions.append({
+                                "type": "inventory",
+                                "value": f"inv-{item}"
+                            })
+                        elif action_lower.startswith('xbtn'):
                             parts = [part.strip() for part in action[5:].split(',')]  # Разделяем по запятым
                             if len(parts) >= 2:
                                 target = parts[0]  # Первая часть — целевое поле
@@ -122,123 +164,173 @@ def parse_input_to_json(input_path):
                                         # Добавляем метку [usable], если предмет используется
                                         if item in usable_items:
                                             item += "[usable]"
-                                        parsed_xbtn_actions.append({"type": "inv+", "item": item})
+                                        parsed_xbtn_actions.append({
+                                            "type": "inventory",
+                                            "value": f"inv+{item}"
+                                        })
                                     elif act_lower.startswith('inv-'):
                                         item = act[5:].strip()
                                         # Добавляем метку [usable], если предмет используется
                                         if item in usable_items:
                                             item += "[usable]"
-                                        parsed_xbtn_actions.append({"type": "inv-", "item": item})
+                                        parsed_xbtn_actions.append({
+                                            "type": "inventory",
+                                            "value": f"inv-{item}"
+                                        })
                                     elif '=' in act:  # Обработка присваивания значений
                                         key, value = act.split('=', 1)
-                                        parsed_xbtn_actions.append({"type": "assign", "key": key.strip(), "value": value.strip()})
+                                        parsed_xbtn_actions.append({
+                                            "type": "assign",
+                                            "value": {
+                                                "key": key.strip(),
+                                                "value": value.strip(),
+                                                "name": ""
+                                            }
+                                        })
                                     else:
-                                        parsed_xbtn_actions.append({"type": "unknown", "raw": act})
+                                        parsed_xbtn_actions.append({
+                                            "type": "unknown",
+                                            "value": act
+                                        })
 
                                 parsed_actions.append({
                                     "type": "xbtn",
-                                    "target": target,
-                                    "actions": parsed_xbtn_actions,
-                                    "text": button_text
+                                    "value": {
+                                        "target": target,
+                                        "text": button_text,
+                                        "actions": parsed_xbtn_actions
+                                    }
                                 })
                         elif '=' in action:  # Обработка присваивания значений
                             key, value = action.split('=', 1)
-                            parsed_actions.append({"type": "assign", "key": key.strip(), "value": value.strip()})
+                            parsed_actions.append({
+                                "type": "assign",
+                                "value": {
+                                    "key": key.strip(),
+                                    "value": value.strip(),
+                                    "name": ""
+                                }
+                            })
                         else:
-                            parsed_actions.append({"type": "unknown", "raw": action})
+                            parsed_actions.append({
+                                "type": "unknown",
+                                "value": action
+                            })
 
-                    if "conditions" not in json_data[chapter_id]:
-                        json_data[chapter_id]["conditions"] = []
-                    json_data[chapter_id]["conditions"].append({
-                        "condition": condition,
-                        "actions": parsed_actions
+                    actions.append({
+                        "type": "if",
+                        "value": {
+                            "condition": condition,
+                            "actions": parsed_actions
+                        }
                     })
                 else:
-                    rest_data.append(f"{chapter_id}: {line}")
-            elif line_lower.startswith('xbtn'):  # XBTN (регистронезависимо)
+                    actions.append({
+                        "type": "unknown",
+                        "value": line
+                    })
+
+            # Обработка XBTN (специальная кнопка)
+            elif line_lower.startswith('xbtn'):
                 parts = [part.strip() for part in line[5:].split(',')]  # Разделяем по запятым
                 if len(parts) >= 2:
                     target = parts[0]  # Первая часть — целевое поле
-                    actions = parts[1:-1]  # Действия (все, кроме первого и последнего)
+                    actions_xbtn = parts[1:-1]  # Действия (все, кроме первого и последнего)
                     button_text = parts[-1]  # Последняя часть — текст кнопки
 
-                    parsed_actions = []
-                    for action in actions:
+                    parsed_xbtn_actions = []
+                    for action in actions_xbtn:
                         action_lower = action.lower()  # Приводим действие к нижнему регистру
                         if action_lower.startswith('inv+'):
                             item = action[5:].strip()
                             # Добавляем метку [usable], если предмет используется
                             if item in usable_items:
                                 item += "[usable]"
-                            parsed_actions.append({"type": "inv+", "item": item})
+                            parsed_xbtn_actions.append({
+                                "type": "inventory",
+                                "value": f"inv+{item}"
+                            })
                         elif action_lower.startswith('inv-'):
                             item = action[5:].strip()
                             # Добавляем метку [usable], если предмет используется
                             if item in usable_items:
                                 item += "[usable]"
-                            parsed_actions.append({"type": "inv-", "item": item})
+                            parsed_xbtn_actions.append({
+                                "type": "inventory",
+                                "value": f"inv-{item}"
+                            })
                         elif '=' in action:  # Обработка присваивания значений
                             key, value = action.split('=', 1)
-                            parsed_actions.append({"type": "assign", "key": key.strip(), "value": value.strip()})
+                            parsed_xbtn_actions.append({
+                                "type": "assign",
+                                "value": {
+                                    "key": key.strip(),
+                                    "value": value.strip(),
+                                    "name": ""
+                                }
+                            })
                         else:
-                            parsed_actions.append({"type": "unknown", "raw": action})
+                            parsed_xbtn_actions.append({
+                                "type": "unknown",
+                                "value": action
+                            })
 
-                    # Сохраняем xbtn как объект
-                    json_data[chapter_id]["xbtn"] = {
-                        "target": target,
-                        "actions": parsed_actions,
-                        "text": button_text
-                    }
+                    actions.append({
+                        "type": "xbtn",
+                        "value": {
+                            "target": target,
+                            "text": button_text,
+                            "actions": parsed_xbtn_actions
+                        }
+                    })
                 else:
-                    rest_data.append(f"{chapter_id}: {line}")
-            elif line_lower.startswith('image'):  # Image (регистронезависимо)
+                    actions.append({
+                        "type": "unknown",
+                        "value": line
+                    })
+
+            # Обработка Image (изображение)
+            elif line_lower.startswith('image'):
                 image_value = line.split('=', 1)[1].strip().strip('"')  # Извлекаем значение после "=" и убираем кавычки
                 image_value = image_value.replace('\\', '/')  # Заменяем двойные слеши на одинарные
-                json_data[chapter_id]["image"] = image_value
+                actions.append({
+                    "type": "image",
+                    "value": image_value
+                })
+
+            # Обработка характеристик (assign)
             elif '=' in line:
-                if "characteristics" not in json_data[chapter_id]:
-                    json_data[chapter_id]["characteristics"] = {}
                 parts = line.split(';')
                 key_value = parts[0].strip().split('=')
                 key = key_value[0].strip()
                 value = key_value[1].strip()
                 name = parts[1].strip() if len(parts) > 1 else ""
-                json_data[chapter_id]["characteristics"][key] = {
-                    "value": value,
-                    "name": name
-                }
+                actions.append({
+                    "type": "assign",
+                    "value": {
+                        "key": key,
+                        "value": value,
+                        "name": name
+                    }
+                })
+
+            # Обработка неизвестных строк
             else:
-                rest_data.append(f"{chapter_id}: {line}")
+                actions.append({
+                    "type": "unknown",
+                    "value": line
+                })
 
-        json_data[chapter_id]["text"] = json_data[chapter_id]["text"].strip()
+        json_data[chapter_id] = actions
 
-        if "add_gold" in json_data[chapter_id] and json_data[chapter_id]["add_gold"] == 0:
-            del json_data[chapter_id]["add_gold"]
-        if "remove_gold" in json_data[chapter_id] and json_data[chapter_id]["remove_gold"] == 0:
-            del json_data[chapter_id]["remove_gold"]
-        if "add_items" in json_data[chapter_id] and not json_data[chapter_id]["add_items"]:
-            del json_data[chapter_id]["add_items"]
-        if "remove_items" in json_data[chapter_id] and not json_data[chapter_id]["remove_items"]:
-            del json_data[chapter_id]["remove_items"]
-        if "conditions" in json_data[chapter_id] and not json_data[chapter_id]["conditions"]:
-            del json_data[chapter_id]["conditions"]
-        if "characteristics" in json_data[chapter_id] and not json_data[chapter_id]["characteristics"]:
-            del json_data[chapter_id]["characteristics"]
-
-    return json_data, rest_data
+    return json_data
 
 def save_json_to_file(json_data, output_path):
     with open(output_path, 'w', encoding='utf-8') as file:
         json.dump(json_data, file, ensure_ascii=False, indent=4)
 
-def save_rest_to_file(rest_data, rest_path):
-    with open(rest_path, 'w', encoding='utf-8') as file:
-        file.write("\n".join(rest_data))
-
 input_path = 'input.txt'
 output_path = 'output.json'
-rest_path = 'rest.txt'
 
-json_data, rest_data = parse_input_to_json(input_path)
+json_data = parse_input_to_json(input_path)
 save_json_to_file(json_data, output_path)
-save_rest_to_file(rest_data, rest_path)
