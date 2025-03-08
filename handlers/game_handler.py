@@ -234,7 +234,13 @@ def handle_choice(message):
 
 # Получение всех доступных вариантов выбора (главы)
 def get_all_options():
-    return {option for chapter in chapters.values() for option in chapter["options"].keys()}
+    # ✅ Проверяем наличие ключа 'options' перед попыткой получить к нему доступ
+    return {
+        option for chapter in chapters.values()
+        if "options" in chapter
+        for option in chapter["options"].keys()
+    }
+
 
 # Сохранение текущего состояния игрока
 @bot.message_handler(func=lambda message: message.text == "📥 Сохранить игру")
