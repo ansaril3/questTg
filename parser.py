@@ -6,7 +6,12 @@ def read_file(input_path):
         return file.read()
     
 def split_into_chapters(content):
-    return content.split('End')[:-1]
+    # Разделяем по строкам, начинающимся с End
+    chapters = re.split(r'\nEnd\b', content)
+    # Убираем последний элемент, если он пустой
+    if chapters[-1].strip() == "":
+        chapters = chapters[:-1]
+    return chapters
 
 def collect_usable_items(chapters):
     usable_items = set()
@@ -49,7 +54,8 @@ def parse_action(line, usable_items, chapter_id, rest_data):
     elif line_lower.startswith('image'):
         return parse_image_action(line)
 
-    elif line_lower.startswith('end'):
+    elif line_lower.startswith('end') and line.strip().lower() == 'end':
+        # Обрабатываем End только если это отдельная строка
         return {"type": "end", "value": ""}
 
     elif '=' in line:
@@ -115,7 +121,7 @@ def parse_if_action(line, usable_items, chapter_id, rest_data):
     else:
         rest_data.append(f"{chapter_id}: {line}")
         return {"type": "unknown", "value": line}
-    
+     
 def parse_xbtn_action(line, usable_items, chapter_id, rest_data):
     parts = [part.strip() for part in line[5:].split(',')]
     if len(parts) >= 2:
@@ -187,6 +193,11 @@ def parse_chapter(chapter, usable_items, rest_data):
     actions = []
 
     for line in lines[1:]:
+        # Игнорируем пустые строки
+        if not line.strip():
+            continue
+
+        # Парсим действие
         action = parse_action(line, usable_items, chapter_id, rest_data)
         if action:
             actions.append(action)
