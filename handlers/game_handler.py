@@ -43,6 +43,7 @@ def send_chapter(chat_id):
 
     # Выполняем все действия главы
     for action in chapter:
+        print(f"------ACTION: {action}")
         execute_action(chat_id, state, action, buttons)
 
     # Отправляем кнопки после выполнения всех действий
@@ -51,6 +52,10 @@ def send_chapter(chat_id):
 
 # ✅ Общая функция отправки кнопок
 def send_buttons(chat_id, buttons):
+    if not buttons:
+        print("⚠️ Нет кнопок для отображения")
+        return
+
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
     markup.add(*buttons)
 
@@ -63,14 +68,14 @@ def send_buttons(chat_id, buttons):
         types.KeyboardButton("📊 Характеристики"),
     )
 
-    bot.send_message(chat_id, ".", reply_markup=markup)
+    print(f"📌 Отправляю кнопки: {[btn.text for btn in buttons]}")
+    bot.send_message(chat_id, "Выберите действие:", reply_markup=markup)
+
 
 # ✅ Общая обработка действия
 def execute_action(chat_id, state, action, buttons):
     action_type = action["type"]
     value = action["value"]
-
-    print(f"➡️ Action: {action_type} | value: {str(value)[:60]}{'...' if len(str(value)) > 60 else ''}")
 
     if action_type == "text":
         handle_text(chat_id, value)
@@ -91,6 +96,7 @@ def execute_action(chat_id, state, action, buttons):
     elif action_type == "if":
         handle_if(chat_id, state, value, buttons)
 
+
 # ✅ Обработчики конкретных действий
 def handle_text(chat_id, value):
     bot.send_message(chat_id, value)
@@ -103,9 +109,11 @@ def handle_xbtn(chat_id, state, value, buttons):
     buttons.append(types.KeyboardButton(value["text"]))
     state["options"][value["text"]] = value["target"]
 
-    # Выполняем действия внутри xbtn
+    # Выполняем действия внутри xbtn и добавляем их кнопки в общий список
     for sub_action in value.get("actions", []):
-        execute_action(chat_id, state, sub_action, buttons)
+        sub_buttons = []  # Локальный список для вложенных кнопок
+        execute_action(chat_id, state, sub_action, sub_buttons)
+        buttons.extend(sub_buttons)  # Добавляем в родительский список кнопок
 
 def handle_inventory(state, value):
     process_inventory_action(state, value)

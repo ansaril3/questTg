@@ -4,12 +4,13 @@ from utils.state_manager import load_state, save_state
 from handlers.game_handler import send_buttons 
 import telebot.types as types
 
-# Просмотр инвентаря (с золотыми монетами)
+# Обработка инвентаря
 @bot.message_handler(func=lambda message: message.text == "🎒 Инвентарь")
 def show_inventory(message):
     chat_id = message.chat.id
     state = load_state(chat_id)
-    # ✅ Передаем кнопки из состояния главы
+    
+    # ✅ Передаем кнопки из состояния главы (исправлено)
     buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
 
     inventory_list = state.get("inventory", [])
@@ -27,15 +28,15 @@ def show_inventory(message):
     for item in inventory_list:
         if "[usable]" in item:
             item_name = item.replace("[usable]", "").strip()
-            use_button = f"Use {item_name}"
-            buttons.append(use_button)
+            # ✅ Создаем кнопку правильно через types.KeyboardButton
+            buttons.append(types.KeyboardButton(f"Use {item_name}"))
             message_text += f"🔹 {item_name} (✨ usable)\n"
         else:
             message_text += f"🔹 {item}\n"
     
     bot.send_message(chat_id, f"\n{message_text}", parse_mode="Markdown")
 
-
+    # ✅ Отправляем кнопки после обработки
     send_buttons(chat_id, buttons)
 
 
