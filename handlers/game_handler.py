@@ -192,3 +192,66 @@ def handle_choice(message):
             return
 
     bot.send_message(chat_id, "⚠️ Некорректный выбор. Попробуйте снова.")
+
+# ✅ Сохранение текущего состояния игрока
+@bot.message_handler(func=lambda message: message.text == "📥 Сохранить игру")
+def save_game(message):
+    chat_id = message.chat.id
+    state = load_state(chat_id)
+
+    # Генерация имени сохранения по текущей дате и времени
+    save_name = datetime.now().strftime("%Y-%m-%d %H:%M")
+    
+    # Ограничение количества сохранений по лимиту
+    if len(state["saves"]) >= SAVES_LIMIT:
+        state["saves"].popleft()  # Удаляем самое старое сохранение, чтобы освободить место
+    
+    state["saves"].append({"name": save_name, "chapter": state["chapter"]})
+    save_state(chat_id, state)
+
+    bot.send_message(chat_id, f"✅ *Игра сохранена:* `{save_name}`", parse_mode="Markdown")
+
+    buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
+    send_buttons(chat_id, buttons)
+
+
+# ✅ Загрузка сохранения
+@bot.message_handler(func=lambda message: message.text == "📤 Загрузить игру")
+def load_game(message):
+    chat_id = message.chat.id
+    state = load_state(chat_id)
+
+    if not state["saves"]:
+        bot.send_message(chat_id, "⚠️ *Нет доступных сохранений!*", parse_mode="Markdown")
+        return
+
+    # Формируем меню с доступными сохранениями
+    markup = types.ReplyKeyboardMarkup(row_width=1, one_time_keyboard=True)
+    for i, save in enumerate(state["saves"]):
+        markup.add(types.KeyboardButton(f"Загрузить {i + 1} ({save['name']})"))
+
+    bot.send_message(chat_id, "🔄 *Выберите сохранение:*", reply_markup=markup, parse_mode="Markdown")
+
+
+# ✅ Обработка выбора сохранения
+@bot.message_handler(func=lambda message: message.text.startswith("Загрузить "))
+def handle_load_choice(message):
+    chat_id = message.chat.id
+    state = load_state(chat_id)
+
+    # Получаем список сохранений
+    saves_list = list(state["saves"])
+    try:
+        save_index = int(message.text.split()[1]) - 1
+        if 0 <= save_index < len(saves_list):
+            selected_save = saves_list[save_index]
+
+            state["chapter"] = selected_save["chapter"]
+            save_state(chat_id, state)
+
+            bot.send_message(chat_id, f"✅ *Сохранение загружено:* `{selected_save['name']}`", parse_mode="Markdown")
+            send_chapter(chat_id)
+        else:
+            bot.send_message(chat_id, "⚠️ *Некорректный выбор сохранения.*", parse_mode="Markdown")
+    except (ValueError, IndexError):
+        bot.send_message(chat_id, "⚠️ *Ошибка выбора сохранения.*", parse_mode="Markdown")
