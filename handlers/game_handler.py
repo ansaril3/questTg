@@ -216,7 +216,7 @@ def handle_choice(message):
             if target == "return":
                 if state["history"]:
                     # ✅ Возврат в предыдущую инструкцию
-                    state["instruction"] = state["history"].pop()
+                    state["chapter"] = state["history"].pop()
                     save_state(chat_id, state)
                     handle_goto(chat_id, state, action["value"]["target"])
                 else:
@@ -224,8 +224,8 @@ def handle_choice(message):
                 return
             if target in chapters:
                 # ✅ Сохраняем текущую инструкцию в историю перед переходом
-                state["history"].append(state["instruction"])
-                state["instruction"] = target
+                state["history"].append(state["chapter"])
+                state["chapter"] = target
                 save_state(chat_id, state)
                 handle_goto(chat_id, state, action["value"]["target"])
                 return
