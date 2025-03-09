@@ -45,7 +45,7 @@ def send_chapter(chat_id):
 
     # Выполняем все действия главы
     for action in chapter:
-        print(f"------ACTION: {action}")
+        print(f"------ACTION: {str(action)[:60]}{'...' if len(str(action)) > 60 else ''}")
         execute_action(chat_id, state, action, buttons)
 
     # Отправляем кнопки после выполнения всех действий
@@ -86,6 +86,7 @@ def execute_action(chat_id, state, action, buttons):
     elif action_type == "xbtn":
         handle_xbtn(chat_id, state, value, buttons)
     elif action_type == "inventory":
+        print(f"🔎 Вызов handle_inventory с параметром: {value}")
         handle_inventory(state, value)
     elif action_type == "gold":
         handle_gold(state, value)
@@ -113,13 +114,14 @@ def handle_xbtn(chat_id, state, value, buttons):
     buttons.append(types.KeyboardButton(value["text"]))
     state["options"][value["text"]] = value["target"]
 
-    # Выполняем действия внутри xbtn и добавляем их кнопки в общий список
-    for sub_action in value.get("actions", []):
-        sub_buttons = []  # Локальный список для вложенных кнопок
-        execute_action(chat_id, state, sub_action, sub_buttons)
-        buttons.extend(sub_buttons)  # Добавляем в родительский список кнопок
+    # ✅ Сохраняем вложенные действия для выполнения при нажатии на кнопку
+    if "actions" in value:
+        state["options"][f"{value['text']}_actions"] = value["actions"]
+        print(f"✅ Сохранены вложенные действия для {value['text']}: {value['actions']}")
+
 
 def handle_inventory(state, value):
+    print(f"🔎 Вызов handle_inventory: {value}")
     process_inventory_action(state, value)
 
 def handle_gold(state, value):
@@ -213,22 +215,38 @@ def handle_choice(message):
     for action in chapter:
         if action["type"] in ("btn", "xbtn") and action["value"]["text"] == message.text:
             target = action["value"]["target"]
+
+            # ✅ Выполняем вложенные действия перед переходом
+            actions = state["options"].get(f"{message.text}_actions")
+            if actions:
+                print(f"✅ Выполняю вложенные действия для {message.text}: {actions}")
+
+                buttons = []
+                for sub_action in actions:
+                    execute_action(chat_id, state, sub_action, buttons)
+
+                # ✅ Сохраняем изменения состояния после выполнения
+                save_state(chat_id, state)
+                send_buttons(chat_id, buttons)
+
+            # ✅ Выполняем переход только после выполнения вложенных действий
             if target == "return":
                 if state["history"]:
-                    # ✅ Возврат в предыдущую инструкцию
                     state["chapter"] = state["history"].pop()
                     save_state(chat_id, state)
-                    handle_goto(chat_id, state, action["value"]["target"])
+                    send_chapter(chat_id)
                 else:
-                    bot.send_message(chat_id, "⚠️ Нет предыдущей инструкции для возврата.")
+                    bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
                 return
+
             if target in chapters:
-                # ✅ Сохраняем текущую инструкцию в историю перед переходом
                 state["history"].append(state["chapter"])
                 state["chapter"] = target
                 save_state(chat_id, state)
-                handle_goto(chat_id, state, action["value"]["target"])
+                send_chapter(chat_id)
                 return
+
+            return
 
     bot.send_message(chat_id, "⚠️ Некорректный выбор. Попробуйте снова.")
 

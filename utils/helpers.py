@@ -67,6 +67,7 @@ def check_conditions(state, conditions):
 
 # Обработка инвентарных действий (Inv+ / Inv- / Invkill)
 def process_inventory_action(state, action):
+    print(f"🔎 Вызов process_inventory_action: action={action}")
     if not action:
         print(f"⚠️ Пустое значение инвентаря: {action}")
         return

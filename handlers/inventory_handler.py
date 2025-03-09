@@ -26,6 +26,7 @@ def show_inventory(message):
         message_text += f"💰 Золото: {gold}\n"
 
     for item in inventory_list:
+        print(f"iventory irems{item}")
         if "[usable]" in item:
             item_name = item.replace("[usable]", "").strip()
             # ✅ Создаем кнопку правильно через types.KeyboardButton
@@ -58,8 +59,5 @@ def handle_use_item(message):
     else:
         bot.send_message(chat_id, f"⚠️ Глава '{use_chapter_key}' не найдена.")
 
-    # Обновляем инвентарь после использования
-    show_inventory(message)
-
-    # После отображения инвентаря повторно отправляем клавиатуру действий
-    send_chapter(chat_id)
+    # ✅ Убираем повторный вызов главы
+    # show_inventory(message)
