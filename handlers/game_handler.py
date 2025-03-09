@@ -2,7 +2,7 @@
 
 from config import bot, chapters, first_chapter  
 from utils.state_manager import load_state, save_state, SAVES_LIMIT
-from utils.helpers import check_conditions, calculate_characteristic, process_inventory_action, replace_variables_in_text
+from utils.helpers import check_conditions, calculate_characteristic, process_inventory_action, replace_variables_in_text, evaluate_condition
 import telebot.types as types
 from collections import deque
 from datetime import datetime
@@ -19,10 +19,12 @@ def start_game(message):
         "inventory": [],
         "gold": 0,
         "characteristics": {},
-        "saves": deque([], maxlen=SAVES_LIMIT)
+        "saves": deque([], maxlen=SAVES_LIMIT),
+        "options": {}  # ✅ Добавляем пустой объект для хранения кнопок
     }
     save_state(user_id, state)
     send_chapter(user_id)
+
     
 # Обновление характеристик персонажа
 def update_characteristics(state, chapter):
@@ -41,141 +43,136 @@ def send_chapter(chat_id):
     chapter_key = state["chapter"]
     chapter = chapters.get(chapter_key)
 
-    print(f"handler | ----------------------------- chapter: {chapter_key}")
     if not chapter:
         bot.send_message(chat_id, "Ошибка: глава не найдена.")
         return
 
-   
-    
-    # Обновление характеристик
-    update_characteristics(state, chapter)
+    buttons = []
+    state["options"] = {}
 
-    # Добавление предметов в инвентарь
-    if "add_items" in chapter:
-        for item in chapter["add_items"]:
-            if item not in state["inventory"]:
-                state["inventory"].append(item)
-                print(f"handler | add item: {item}")
-    
-    # Удаление предметов из инвентаря
-    if "remove_items" in chapter:
-        for item in chapter["remove_items"]:
-            if item in state["inventory"]:
-                state["inventory"].remove(item)
-                print(f"handler | remove item: {item}")
+    # ✅ Выполняем все действия главы построчно
+    for action in chapter:
+        execute_action(chat_id, state, action, buttons)
 
-    # Добавление и удаление золота
-    if "add_gold" in chapter:
-        state["gold"] += chapter["add_gold"]
-        print(f"handler | add gold: {chapter['add_gold']}")
-    
-    if "remove_gold" in chapter:
-        state["gold"] -= chapter["remove_gold"]
-        print(f"handler | remove gold: {chapter['remove_gold']}")  
+    # ✅ Отправляем кнопки в Telegram
+    markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
+    markup.add(*buttons)
 
-    state["chapter"] = chapter_key
+    # ✅ Добавляем стандартные кнопки меню
+    markup.add(
+        types.KeyboardButton("📥 Сохранить игру"),
+        types.KeyboardButton("📤 Загрузить игру"),
+        types.KeyboardButton("📖 Инструкция"),
+        types.KeyboardButton("🎒 Инвентарь"),
+        types.KeyboardButton("📊 Характеристики"),
+    )
+
+    # ✅ ОТПРАВКА МЕНЮ ПОСЛЕ ВСЕХ ДЕЙСТВИЙ
+    bot.send_message(chat_id, ".", reply_markup=markup)
     save_state(chat_id, state)
 
-    chapter_text = replace_variables_in_text(chapter["text"], state)
-    if chapter_text == "": 
-        chapter_text = '.'
-    bot.send_message(chat_id, chapter_text)
-    # 📷 Отправляем изображение, если есть
-    if "image" in chapter:
-        image_path = DATA_DIR + chapter["image"].replace("\\", "/")
+def execute_action(chat_id, state, action, buttons):
+    action_type = action["type"]
+    value = action["value"]
+
+    if action_type == "text":
+        bot.send_message(chat_id, value)
+
+    elif action_type == "btn":
+        buttons.append(types.KeyboardButton(value["text"]))
+        state["options"][value["text"]] = value["target"]
+
+    elif action_type == "xbtn":
+        buttons.append(types.KeyboardButton(value["text"]))
+        state["options"][value["text"]] = value["target"]
+
+        # ✅ Выполняем вложенные действия в xbtn
+        for sub_action in value.get("actions", []):
+            execute_action(chat_id, state, sub_action, buttons)
+
+    elif action_type == "inventory":
+        process_inventory_action(state, value)
+
+    elif action_type == "gold":
+        if value.startswith("+"):
+            state["gold"] += int(value[1:])
+        elif value.startswith("-"):
+            state["gold"] -= int(value[1:])
+
+    elif action_type == "assign":
+        key = value["key"]
+        new_value = value["value"]
+        name = value.get("name", key)
+        local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
+
+        try:
+            new_value = int(new_value) if new_value.isdigit() else eval(new_value, {}, local_vars)
+        except Exception as e:
+            print(f"Ошибка в assign: {e}")
+            new_value = state["characteristics"].get(key, {"value": 0})["value"]
+
+        state["characteristics"][key] = {
+            "name": name,
+            "value": new_value
+        }
+
+    elif action_type == "goto":
+        target = value
+        if target and target in chapters:
+            state["chapter"] = target
+            save_state(chat_id, state)
+            send_chapter(chat_id)  # ✅ Не прерываем выполнение!
+            # ❌ НЕ добавляем return — иначе изображение и меню не покажутся!
+
+    elif action_type == "if":
+        condition = value["condition"]
+        actions = value["actions"]
+        else_actions = value.get("else_actions", [])
+
+        local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
+        try:
+            if eval(condition, {}, local_vars):
+                for sub_action in actions:
+                    execute_action(chat_id, state, sub_action, buttons)
+            else:
+                for sub_action in else_actions:
+                    execute_action(chat_id, state, sub_action, buttons)
+        except Exception as e:
+            print(f"Ошибка в блоке if: {e}")
+
+    # ✅ ОТОБРАЖЕНИЕ ИЗОБРАЖЕНИЯ ИЗ JSON  
+    elif action_type == "image":
+        image_path = DATA_DIR + value.replace("\\", "/")
         if os.path.exists(image_path):
             with open(image_path, "rb") as photo:
                 bot.send_photo(chat_id, photo)
         else:
-            bot.send_message(chat_id, f"⚠️ Изображение не найдено: {chapter['image']}")
+            bot.send_message(chat_id, f"⚠️ Изображение не найдено: {value}")
 
-     # 🔥 Проверяем наличие массива actions в главе
-    if "actions" in chapter and isinstance(chapter["actions"], list):
-        for action in chapter["actions"]:
-            if action["type"] == "goto":
-                target = action.get("target")
-                if target and target in chapters:
-                    print(f"✅ Выполняем автоматический переход на главу {target}")
-                    state["chapter"] = target
-                    save_state(chat_id, state)
-                    send_chapter(chat_id)  # Рекурсивно вызываем отправку новой главы
-                    return
-                
-    # Отправка кнопок из options
-    send_options_keyboard(chat_id, chapter)
+
 
 
 def send_options_keyboard(chat_id, chapter):
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
     state = load_state(chat_id)
 
-    # Стандартные кнопки из options
-    buttons = [types.KeyboardButton(option) for option in chapter["options"].keys()]
+    buttons = []
+    state["options"] = {}
 
-    # Проверяем xbtn в корне главы
-    if "xbtn" in chapter:
-        xbtn = chapter["xbtn"]
-        buttons.append(types.KeyboardButton(xbtn["text"]))
-        chapter["options"][xbtn["text"]] = {  
-            "target": xbtn["target"],  
-            "actions": xbtn["actions"]  
-        }  # ✅ Сохраняем actions
+    # ✅ Ищем кнопки в списке действий
+    for action in chapter:
+        if action["type"] == "btn":
+            value = action["value"]
+            buttons.append(types.KeyboardButton(value["text"]))
+            state["options"][value["text"]] = value["target"]
 
-    # Проверяем условия из "conditions"
-    condition_buttons = []
-    if "conditions" in chapter:
-        condition_buttons, condition_actions = check_conditions(state, chapter["conditions"])
+        # ✅ Поддержка xbtn (вложенные действия)
+        if action["type"] == "xbtn":
+            value = action["value"]
+            buttons.append(types.KeyboardButton(value["text"]))
+            state["options"][value["text"]] = value["target"]
 
-        print(f"handler | condition_buttons: {condition_buttons}")
-
-        # Добавляем кнопки из условий
-        for btn in condition_buttons:
-            buttons.append(types.KeyboardButton(btn["text"]))
-            chapter["options"][btn["text"]] = {  
-                "target": btn["target"],  
-                "actions": btn.get("actions", [])  # ✅ Если нет actions, используем пустой список
-            }
-
-        print(f"handler | condition_actions: {condition_actions}")
-
-        # Выполняем действия из условий
-        for action in condition_actions:
-            print(f"handler | action: {action}")
-
-            if action["type"] == "pln":
-                if isinstance(action["text"], str):  # ✅ Проверяем, что это строка
-                    processed_text = replace_variables_in_text(action["text"], state)
-                    if processed_text == "": 
-                        processed_text = '.'
-                    bot.send_message(chat_id, processed_text)
-                else:
-                    print(f"Ошибка: ожидалась строка, но получено {type(action['text'])}")
-
-            elif action["type"] == "assign":
-                key, value = action["key"], action["value"]
-                current_value = state["characteristics"].get(key, {"value": 0})["value"]
-                local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
-                try:
-                    new_value = int(value) if value.isdigit() else eval(value, {}, local_vars)
-                except Exception as e:
-                    print(f"Ошибка в assign: {e}")
-                    new_value = current_value  
-
-                state["characteristics"][key] = {
-                    "name": state["characteristics"].get(key, {"name": key})["name"],
-                    "value": new_value,
-                }
-                
-            elif action["type"] == "goto":
-                state["chapter"] = action["target"]
-                save_state(chat_id, state)
-                send_chapter(chat_id)
-                return  
-
-    save_state(chat_id, state)
-
-    # Добавляем основные кнопки
+    # ✅ Добавляем стандартные кнопки меню
     markup.add(*buttons)
     markup.add(
         types.KeyboardButton("📥 Сохранить игру"),
@@ -184,7 +181,10 @@ def send_options_keyboard(chat_id, chapter):
         types.KeyboardButton("🎒 Инвентарь"),
         types.KeyboardButton("📊 Характеристики"),
     )
+
+    # ✅ Отправляем клавиатуру
     bot.send_message(chat_id, ".", reply_markup=markup)
+    save_state(chat_id, state)
 
 # Обработка выбора игрока (главы)
 @bot.message_handler(func=lambda message: message.text in get_all_options())
@@ -194,52 +194,44 @@ def handle_choice(message):
     chapter_key = state["chapter"]
     chapter = chapters.get(chapter_key)
 
-    if message.text in chapter["options"]:
-        option_data = chapter["options"][message.text]
+    if not chapter:
+        bot.send_message(chat_id, "⚠️ Ошибка: глава не найдена.")
+        return
 
-        # ✅ Исправлено! Теперь actions корректно выполняются перед переходом
-        if isinstance(option_data, dict) and "actions" in option_data:
-            for action in option_data["actions"]:
-                print(f"handler | executing action: {action}")
+    for action in chapter:
+        if action["type"] == "btn" and action["value"]["text"] == message.text:
+            target = action["value"]["target"]
+            state["chapter"] = target
+            save_state(chat_id, state)
+            send_chapter(chat_id)
+            return
 
-                if action["type"] == "inv+":
-                    process_inventory_action(state, f"Inv+ {action['item']}")
-                elif action["type"] == "inv-":
-                    process_inventory_action(state, f"Inv- {action['item']}")
-                elif action["type"] == "assign":
-                    key, value = action["key"], action["value"]
-                    current_value = state["characteristics"].get(key, {"value": 0})["value"]
-                    local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
-                    try:
-                        new_value = int(value) if value.isdigit() else eval(value, {}, local_vars)
-                    except Exception as e:
-                        print(f"Ошибка в assign: {e}")
-                        new_value = current_value  
+        if action["type"] == "xbtn" and action["value"]["text"] == message.text:
+            target = action["value"]["target"]
+            state["chapter"] = target
+            
+            # ✅ Выполняем все actions, связанные с xbtn
+            for sub_action in action["value"]["actions"]:
+                execute_action(chat_id, state, sub_action, [])
+                
+            save_state(chat_id, state)
+            send_chapter(chat_id)
+            return
 
-                    state["characteristics"][key] = {
-                        "name": state["characteristics"].get(key, {"name": key})["name"],
-                        "value": new_value,
-                    }
+    bot.send_message(chat_id, "⚠️ Некорректный выбор. Попробуйте снова.")
 
-            # ✅ Устанавливаем новую главу только после выполнения действий
-            state["chapter"] = option_data["target"]
 
-        else:
-            state["chapter"] = option_data
-
-        save_state(chat_id, state)
-        send_chapter(chat_id)
-    else:
-        bot.send_message(chat_id, "Некорректный выбор. Попробуйте снова.")
 
 # Получение всех доступных вариантов выбора (главы)
 def get_all_options():
-    # ✅ Проверяем наличие ключа 'options' перед попыткой получить к нему доступ
     return {
-        option for chapter in chapters.values()
-        if "options" in chapter
-        for option in chapter["options"].keys()
+        option 
+        for chapter in chapters.values()
+        for action in chapter 
+        if action["type"] == "btn" or action["type"] == "xbtn"
+        for option in ([action["value"]["text"]] if action["type"] == "btn" else [action["value"]["text"]])
     }
+
 
 
 # Сохранение текущего состояния игрока
