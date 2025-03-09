@@ -7,11 +7,11 @@ from datetime import datetime
 import os
 import random
 import re
+from collections import deque
 
 DATA_DIR = "data"  # 📂 Папка с изображениями
+HISTORY_LIMIT = 10 # ✅ Максимальный размер стека для истории переходов
 
-
-# ✅ Старт игры
 @bot.message_handler(commands=['start'])
 def start_game(message):
     user_id = message.chat.id
@@ -22,10 +22,12 @@ def start_game(message):
         "gold": 0,
         "characteristics": {},
         "saves": deque([], maxlen=SAVES_LIMIT),
-        "options": {}
+        "options": {},
+        "history": deque([], maxlen=HISTORY_LIMIT)  # ✅ Стек для истории переходов
     }
     save_state(user_id, state)
     send_chapter(user_id)
+
 
 # ✅ Отправка главы игроку
 def send_chapter(chat_id):
@@ -150,11 +152,23 @@ def handle_assign(state, value):
     state["characteristics"][key] = {"name": name, "value": new_value}
 
 def handle_goto(chat_id, state, value):
-    target = value
-    if target and target in chapters:
-        state["chapter"] = target
+    if value == "return":
+        if state["history"]:
+            # ✅ Переход на предыдущую главу из истории
+            state["chapter"] = state["history"].pop()
+            save_state(chat_id, state)
+            send_chapter(chat_id)
+        else:
+            bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
+        return
+    
+    if value and value in chapters:
+        # ✅ Добавляем текущую главу в стек перед переходом
+        state["history"].append(state["chapter"])
+        state["chapter"] = value
         save_state(chat_id, state)
         send_chapter(chat_id)
+
 
 def handle_image(chat_id, value):
     image_path = DATA_DIR + value.replace("\\", "/")
@@ -198,8 +212,23 @@ def handle_choice(message):
 
     for action in chapter:
         if action["type"] in ("btn", "xbtn") and action["value"]["text"] == message.text:
-            handle_goto(chat_id, state, action["value"]["target"])
-            return
+            target = action["value"]["target"]
+            if target == "return":
+                if state["history"]:
+                    # ✅ Возврат в предыдущую инструкцию
+                    state["instruction"] = state["history"].pop()
+                    save_state(chat_id, state)
+                    handle_goto(chat_id, state, action["value"]["target"])
+                else:
+                    bot.send_message(chat_id, "⚠️ Нет предыдущей инструкции для возврата.")
+                return
+            if target in chapters:
+                # ✅ Сохраняем текущую инструкцию в историю перед переходом
+                state["history"].append(state["instruction"])
+                state["instruction"] = target
+                save_state(chat_id, state)
+                handle_goto(chat_id, state, action["value"]["target"])
+                return
 
     bot.send_message(chat_id, "⚠️ Некорректный выбор. Попробуйте снова.")
 
