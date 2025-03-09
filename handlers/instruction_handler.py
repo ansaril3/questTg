@@ -18,12 +18,15 @@ def send_instruction(chat_id):
         bot.send_message(chat_id, "⚠️ Инструкция не найдена.")
         return
 
+    # Очищаем кнопки из предыдущего состояния
+    state["options"] = {}
+
     for action in instruction:
         action_type = action["type"]
         value = action["value"]
 
         if action_type == "text":
-            bot.send_message(chat_id, value)  # ✅ Отправляем текст
+            bot.send_message(chat_id, value)
 
         elif action_type == "image":
             image_path = DATA_DIR + value.replace("\\", "/")
@@ -39,7 +42,7 @@ def send_instruction(chat_id):
         elif action_type == "goto":
             state["instruction"] = value
             save_state(chat_id, state)
-            send_instruction(chat_id)  # ✅ Рекурсивно вызываем переход
+            send_instruction(chat_id)  # ✅ Переход к следующей инструкции
             return
         
         elif action_type == "if":
@@ -54,7 +57,8 @@ def send_instruction(chat_id):
         elif action_type == "xbtn":
             state["options"][value["text"]] = value["target"]
 
-    send_chapter(chat_id)  # ✅ Показываем кнопки
+    # ✅ Отображаем кнопки инструкции после выполнения всех действий
+    send_instruction_keyboard(chat_id, state)
 
 def handle_instruction_action(chat_id, action):
     action_type = action["type"]
@@ -84,12 +88,14 @@ def handle_instruction_action(chat_id, action):
 
 
 # Отправка клавиатуры для инструкции
-def send_instruction_keyboard(chat_id, instruction):
+def send_instruction_keyboard(chat_id, state):
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
-    buttons = [types.KeyboardButton(option) for option in instruction["options"].keys()]
+    
+    # ✅ Добавляем кнопки из инструкции
+    buttons = [types.KeyboardButton(option) for option in state.get("options", {}).keys()]
     markup.add(*buttons)
     markup.add(types.KeyboardButton("🔙 Вернуться в игру"))
-    bot.send_message(chat_id, "Выберите раздел инструкции:", reply_markup=markup)
+    bot.send_message(chat_id, ".", reply_markup=markup)
 
 # Вход в режим инструкции
 @bot.message_handler(func=lambda message: message.text == "📖 Инструкция")
@@ -118,7 +124,7 @@ def handle_instruction_choice(message):
             if target in instructions:
                 state["instruction"] = target
                 save_state(chat_id, state)
-                send_instruction(chat_id)  # ✅ Рекурсивный вызов для перехода к следующей инструкции
+                send_instruction(chat_id)
                 return
 
     bot.send_message(chat_id, "⚠️ Неверный выбор.")
@@ -128,9 +134,7 @@ def get_instruction_options():
     options = set()
     for instruction in instructions.values():
         for action in instruction:
-            if action["type"] == "btn":
-                options.add(action["value"]["text"])
-            elif action["type"] == "xbtn":
+            if action["type"] in ["btn", "xbtn"]:
                 options.add(action["value"]["text"])
     return options
 
@@ -139,6 +143,10 @@ def get_instruction_options():
 def exit_instruction(message):
     chat_id = message.chat.id
     state = load_state(chat_id)
-    state["instruction"] = None  # Выходим из режима инструкции
+    
+    # ✅ Очищаем состояние инструкции и возвращаем к главе
+    state["instruction"] = None
     save_state(chat_id, state)
-    send_chapter(chat_id)  # Возвращаем игрока в квест
+
+    # ✅ Возвращаем кнопки из главы (не из инструкции)
+    send_chapter(chat_id)
