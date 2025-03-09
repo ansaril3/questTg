@@ -56,7 +56,7 @@ def send_chapter(chat_id):
     for action in chapter:
         execute_action(chat_id, state, action, buttons)
 
-    # ✅ Отправляем кнопки в Telegram
+    # ✅ ОТПРАВКА КНОПОК В МЕНЮ ПОСЛЕ ВСЕХ ДЕЙСТВИЙ
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
     markup.add(*buttons)
 
@@ -69,9 +69,10 @@ def send_chapter(chat_id):
         types.KeyboardButton("📊 Характеристики"),
     )
 
-    # ✅ ОТПРАВКА МЕНЮ ПОСЛЕ ВСЕХ ДЕЙСТВИЙ
+    # ✅ Отправляем меню с кнопками
     bot.send_message(chat_id, ".", reply_markup=markup)
     save_state(chat_id, state)
+
 
 def execute_action(chat_id, state, action, buttons):
     action_type = action["type"]
@@ -139,44 +140,6 @@ def execute_action(chat_id, state, action, buttons):
             send_chapter(chat_id)
             return
 
-    elif action_type == "if":
-        condition = value["condition"]
-        actions = value["actions"]
-        else_actions = value.get("else_actions", [])
-
-        # ✅ Заменяем только одиночный знак '=' на '==', избегая порчи '>=', '<=', '!='
-        condition = re.sub(r'(?<![><!])=', '==', condition)
-
-        # ✅ Подготавливаем локальные переменные из state
-        local_vars = {}
-        for k, v in state["characteristics"].items():
-            try:
-                local_vars[k] = int(v["value"]) if isinstance(v["value"], (int, str)) and str(v["value"]).strip().replace('-', '').isdigit() else v["value"]
-            except Exception as e:
-                print(f"⚠️ Ошибка при преобразовании {k}: {e}")
-
-        print(f"✅ Проверка условия: {condition} | local_vars: {local_vars}")
-
-        try:
-            vars_in_condition = [
-            var for var in re.findall(r'[A-Za-z_][A-Za-z0-9_]*', condition)
-            if var not in {"and", "or", "not", "True", "False"}
-        ]
-            # ✅ Проверяем, что все переменные в условии присутствуют в локальных значениях
-            if all(var in local_vars for var in vars_in_condition):
-                if eval(condition, {}, local_vars):
-                    print(f"✅ Условие ИСТИННО: {condition}")
-                    for sub_action in actions:
-                        execute_action(chat_id, state, sub_action, buttons)
-                else:
-                    print(f"❌ Условие ЛОЖНО: {condition}")
-                    for sub_action in else_actions:
-                        execute_action(chat_id, state, sub_action, buttons)
-            else:
-                print(f"⚠️ Не все переменные найдены в local_vars для: {condition}")
-        except Exception as e:
-            print(f"❌ Ошибка в блоке if: {e}")
-
 
     elif action_type == "image":
         image_path = DATA_DIR + value.replace("\\", "/")
@@ -186,6 +149,21 @@ def execute_action(chat_id, state, action, buttons):
         else:
             bot.send_message(chat_id, f"⚠️ Изображение не найдено: {value}")
 
+    elif action_type == "if":
+        condition = value["condition"]
+        actions = value["actions"]
+        else_actions = value.get("else_actions", [])
+
+        print(f"✅ Проверка условия: {condition}")
+
+        if evaluate_condition(state, condition):
+            print(f"✅ Условие ИСТИННО: {condition}")
+            for sub_action in actions:
+                execute_action(chat_id, state, sub_action, buttons)  # ✅ Передаем список buttons из текущего контекста
+        else:
+            print(f"❌ Условие ЛОЖНО: {condition}")
+            for sub_action in else_actions:
+                execute_action(chat_id, state, sub_action, buttons)  # ✅ Передаем список buttons из текущего контекста
 
 
 
