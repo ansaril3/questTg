@@ -67,17 +67,24 @@ def check_conditions(state, conditions):
 
 # Обработка инвентарных действий (Inv+ / Inv- / Invkill)
 def process_inventory_action(state, action):
-    action_type, item = action.split(" ", 1)
-    print(f"inventory change: action_type = {action_type}, item = {item} ")
-    if action_type.lower() == "inv+":
-        if item not in state["inventory"]:
+    if not action:
+        print(f"⚠️ Пустое значение инвентаря: {action}")
+        return
+
+    if action.startswith("inv+"):
+        item = action[4:].strip()  # Отрезаем "inv+" и обрезаем пробелы
+        if item and item not in state["inventory"]:
             state["inventory"].append(item)
-    elif action_type.lower() == "inv-":
-        if item in state["inventory"]:
+            print(f"✅ Добавлен предмет в инвентарь: {item}")
+
+    elif action.startswith("inv-"):
+        item = action[4:].strip()  # Отрезаем "inv-" и обрезаем пробелы
+        if item and item in state["inventory"]:
             state["inventory"].remove(item)
-    elif action_type.lower() == "invkill":
-        state["inventory"] = [i for i in state["inventory"] if i != item]
-        
+            print(f"✅ Удалён предмет из инвентаря: {item}")
+    else:
+        print(f"⚠️ Некорректный формат инвентаря: {action}")
+ 
 
 def evaluate_condition(state, condition):
     print(f"helper | condition input: {condition}")

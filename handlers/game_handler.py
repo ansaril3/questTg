@@ -75,6 +75,8 @@ def execute_action(chat_id, state, action, buttons):
     action_type = action["type"]
     value = action["value"]
 
+    print(f"➡️ Выполняем действие: {action_type} | Значение: {value}")
+
     if action_type == "text":
         bot.send_message(chat_id, value)
 
@@ -91,6 +93,7 @@ def execute_action(chat_id, state, action, buttons):
             execute_action(chat_id, state, sub_action, buttons)
 
     elif action_type == "inventory":
+        # ✅ Обрабатываем строку с форматом "inv+Меч"
         process_inventory_action(state, value)
 
     elif action_type == "gold":
@@ -121,8 +124,8 @@ def execute_action(chat_id, state, action, buttons):
         if target and target in chapters:
             state["chapter"] = target
             save_state(chat_id, state)
-            send_chapter(chat_id)  # ✅ Не прерываем выполнение!
-            # ❌ НЕ добавляем return — иначе изображение и меню не покажутся!
+            send_chapter(chat_id)
+            return
 
     elif action_type == "if":
         condition = value["condition"]
@@ -140,7 +143,6 @@ def execute_action(chat_id, state, action, buttons):
         except Exception as e:
             print(f"Ошибка в блоке if: {e}")
 
-    # ✅ ОТОБРАЖЕНИЕ ИЗОБРАЖЕНИЯ ИЗ JSON  
     elif action_type == "image":
         image_path = DATA_DIR + value.replace("\\", "/")
         if os.path.exists(image_path):
