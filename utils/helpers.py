@@ -137,12 +137,14 @@ def replace_variables(var_name, state):
     print(f"helper | variable didn't found")
     return "False"
 
-def replace_variables_in_text(text, state):
-    """Заменяет переменные в тексте, заключенные в #Variable$"""
+def replace_variables_in_text(state, text):
     def replace_match(match):
-        var_name = match.group(1)  # Извлекаем имя переменной без #
-        if var_name in state["characteristics"]:
-            return str(state["characteristics"][var_name]["value"])
-        return "0"  # Если переменной нет, подставляем 0
+        key = match.group(1)
+        value = state["characteristics"].get(key, {}).get("value", None)
+        if value is not None:
+            return str(value)
+        return match.group(0)  # Если нет значения — оставляем шаблон как есть
+    
+    # Ищем шаблоны вида #M1$, #V1$ и заменяем их на значения из характеристик
+    return re.sub(r'#([A-Za-z0-9_]+)\$', replace_match, text)
 
-    return re.sub(r"#([A-Za-zА-Яа-я0-9_]+)\$", replace_match, text)

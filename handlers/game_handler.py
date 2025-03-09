@@ -69,7 +69,7 @@ def send_buttons(chat_id, buttons):
     )
 
     print(f"📌 Отправляю кнопки: {[btn.text for btn in buttons]}")
-    bot.send_message(chat_id, "Выберите действие:", reply_markup=markup)
+    bot.send_message(chat_id, ".", reply_markup=markup)
 
 
 # ✅ Общая обработка действия
@@ -99,7 +99,9 @@ def execute_action(chat_id, state, action, buttons):
 
 # ✅ Обработчики конкретных действий
 def handle_text(chat_id, value):
-    bot.send_message(chat_id, value)
+    state = load_state(chat_id)
+    new_value = replace_variables_in_text(state, value)
+    bot.send_message(chat_id, new_value)
 
 def handle_btn(state, value, buttons):
     buttons.append(types.KeyboardButton(value["text"]))
