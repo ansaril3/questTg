@@ -2,7 +2,7 @@
 
 from config import bot, instructions, first_instruction, chapters
 from utils.state_manager import load_state, save_state
-from handlers.game_handler import send_chapter, send_options_keyboard
+from handlers.game_handler import send_chapter
 import telebot.types as types
 import os
 
@@ -54,7 +54,7 @@ def send_instruction(chat_id):
         elif action_type == "xbtn":
             state["options"][value["text"]] = value["target"]
 
-    send_options_keyboard(chat_id, instruction)  # ✅ Показываем кнопки
+    send_chapter(chat_id)  # ✅ Показываем кнопки
 
 def handle_instruction_action(chat_id, action):
     action_type = action["type"]

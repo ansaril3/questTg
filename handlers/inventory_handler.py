@@ -1,7 +1,7 @@
 # Обработка инвентаря
 from config import bot, chapters  # Импортируем bot из config.py
 from utils.state_manager import load_state, save_state
-from handlers.game_handler import send_options_keyboard
+from handlers.game_handler import send_buttons 
 import telebot.types as types
 
 # Просмотр инвентаря (с золотыми монетами)
@@ -9,17 +9,17 @@ import telebot.types as types
 def show_inventory(message):
     chat_id = message.chat.id
     state = load_state(chat_id)
+    # ✅ Передаем кнопки из состояния главы
+    buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
 
     inventory_list = state.get("inventory", [])
     gold = state.get("gold", 0)
-
-    markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
-
     if not inventory_list and gold == 0:
         bot.send_message(chat_id, "🎒 Инвентарь пуст.")
+        send_buttons(chat_id, buttons)
         return
-
-    message_text = "🎒 *Твой инвентарь:*\n"
+    
+    message_text = "🎒 *Ваш инвентарь:*\n"
     
     if gold > 0:
         message_text += f"💰 Золото: {gold}\n"
@@ -28,20 +28,15 @@ def show_inventory(message):
         if "[usable]" in item:
             item_name = item.replace("[usable]", "").strip()
             use_button = f"Use {item_name}"
-            markup.add(types.KeyboardButton(use_button))
-            message_text += f"🔹 {item_name} (🖲️ Использовать)\n"
+            buttons.append(use_button)
+            message_text += f"🔹 {item_name} (✨ Использовать)\n"
         else:
             message_text += f"🔹 {item}\n"
     
-    
-    # Добавляем стандартные кнопки
-    markup.add(
-        types.KeyboardButton("📥 Сохранить игру"),
-        types.KeyboardButton("📤 Загрузить игру"),
-        types.KeyboardButton("📖 Инструкция"),
-        types.KeyboardButton("🔙 Вернуться в игру")
-    )
-    bot.send_message(chat_id, message_text, parse_mode="Markdown", reply_markup=markup)
+    bot.send_message(chat_id, f"\n{message_text}", parse_mode="Markdown")
+
+
+    send_buttons(chat_id, buttons)
 
 
 # ✅ Обработка нажатия на кнопку "Use"
@@ -66,4 +61,4 @@ def handle_use_item(message):
     show_inventory(message)
 
     # После отображения инвентаря повторно отправляем клавиатуру действий
-    send_options_keyboard(chat_id, chapters.get(state["chapter"]))
+    send_chapter(chat_id)
