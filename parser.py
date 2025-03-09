@@ -86,26 +86,31 @@ def parse_actions(actions_list, usable_items, chapter_id, rest_data):
     return parsed_actions
 
 def parse_if_action(line, usable_items, chapter_id, rest_data):
-    line_lower = line.lower()
+    line_lower = line.lower()  # Приводим всю строку к нижнему регистру
     if "then" in line_lower:
+        # Разделяем строку на условие и действия
+        condition_part, actions_part = re.split(r'\bthen\b', line, flags=re.IGNORECASE, maxsplit=1)
+        condition = condition_part[3:].strip()  # Убираем "if" и лишние пробелы
+
+        # Разделяем действия на then и else
         if "else" in line_lower:
-            condition_part, actions_part = re.split(r'\bthen\b', line, flags=re.IGNORECASE, maxsplit=1)
-            else_part = actions_part.split('else', 1)
-            then_actions = else_part[0].strip()
-            else_actions = else_part[1].strip() if len(else_part) > 1 else ""
+            then_actions, else_actions = re.split(r'\belse\b', actions_part, flags=re.IGNORECASE, maxsplit=1)
+            else_actions = else_actions.strip()
         else:
-            condition_part, then_actions = re.split(r'\bthen\b', line, flags=re.IGNORECASE, maxsplit=1)
+            then_actions = actions_part.strip()
             else_actions = ""
 
-        condition = condition_part[3:].strip()
+        # Парсим действия для then
         then_actions_list = [action.strip() for action in re.split(r'\s*&\s*', then_actions)]
         parsed_then_actions = parse_actions(then_actions_list, usable_items, chapter_id, rest_data)
 
+        # Парсим действия для else, если они есть
         parsed_else_actions = []
         if else_actions:
             else_actions_list = [action.strip() for action in re.split(r'\s*&\s*', else_actions)]
             parsed_else_actions = parse_actions(else_actions_list, usable_items, chapter_id, rest_data)
 
+        # Создаем объект if с then и else действиями
         if_obj = {
             "type": "if",
             "value": {
@@ -121,7 +126,7 @@ def parse_if_action(line, usable_items, chapter_id, rest_data):
     else:
         rest_data.append(f"{chapter_id}: {line}")
         return {"type": "unknown", "value": line}
-     
+  
 def parse_xbtn_action(line, usable_items, chapter_id, rest_data):
     parts = [part.strip() for part in line[5:].split(',')]
     if len(parts) >= 2:
