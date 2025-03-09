@@ -87,8 +87,6 @@ def process_inventory_action(state, action):
  
 
 def evaluate_condition(state, condition):
-    print(f"helper | condition input: {condition}")
-
     # Сначала обрабатываем сложные операторы (>=, <=, !=), чтобы не ломать их при замене '='
     condition = condition.replace(">=", "⩾").replace("<=", "⩽").replace("!=", "≠")
     
@@ -110,11 +108,9 @@ def evaluate_condition(state, condition):
 
     # Восстанавливаем логические операторы после подстановки
     condition = condition.replace("&&", " and ").replace("||", " or ")
-    print(f"helper | condition corrected: {condition}")
-
     try:
         result = eval(condition)
-        print(f"helper | condition result eval: {result}")
+        print(f"helper |  {condition} result: {result}")
         return result  # Проверяем, истинно ли условие
     except Exception as e:
         print(f"helper | eval error: {e}")

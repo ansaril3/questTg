@@ -29,7 +29,7 @@ def show_inventory(message):
             item_name = item.replace("[usable]", "").strip()
             use_button = f"Use {item_name}"
             buttons.append(use_button)
-            message_text += f"🔹 {item_name} (✨ Использовать)\n"
+            message_text += f"🔹 {item_name} (✨ usable)\n"
         else:
             message_text += f"🔹 {item}\n"
     
