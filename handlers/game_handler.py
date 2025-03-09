@@ -42,7 +42,7 @@ def send_chapter(chat_id):
     state = load_state(chat_id)
     chapter_key = state["chapter"]
     chapter = chapters.get(chapter_key)
-
+    print(f"------------------------CHAPTER: {chapter_key}")
     if not chapter:
         bot.send_message(chat_id, "Ошибка: глава не найдена.")
         return
@@ -75,7 +75,7 @@ def execute_action(chat_id, state, action, buttons):
     action_type = action["type"]
     value = action["value"]
 
-    print(f"➡️ Выполняем действие: {action_type} | Значение: {value}")
+    print(f"➡️ Action: {action_type} | value: {str(value)[:60]}{'...' if len(str(value)) > 60 else ''}")
 
     if action_type == "text":
         bot.send_message(chat_id, value)
