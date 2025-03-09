@@ -5,29 +5,35 @@ from handlers.game_handler import send_options_keyboard
 import telebot.types as types
 
 # Просмотр инвентаря (с золотыми монетами)
-
 @bot.message_handler(func=lambda message: message.text == "🎒 Инвентарь")
 def show_inventory(message):
     chat_id = message.chat.id
     state = load_state(chat_id)
 
-    inventory = state.get("inventory", [])
-    inventory_text = "\n".join(
-        f"🔹 {item}" for item in inventory
-    ) if inventory else "📭 Пусто"
-
-    # Отображаем текст инвентаря
-    bot.send_message(chat_id, f"🎒 Ваш инвентарь:\n{inventory_text}")
+    inventory_list = state.get("inventory", [])
+    gold = state.get("gold", 0)
 
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
 
-    for item in inventory:
-        # Если предмет содержит [usable], создаем кнопку "Use"
+    if not inventory_list and gold == 0:
+        bot.send_message(chat_id, "🎒 Инвентарь пуст.")
+        return
+
+    message_text = "🎒 *Твой инвентарь:*\n"
+    
+    if gold > 0:
+        message_text += f"💰 Золото: {gold}\n"
+
+    for item in inventory_list:
         if "[usable]" in item:
             item_name = item.replace("[usable]", "").strip()
             use_button = f"Use {item_name}"
             markup.add(types.KeyboardButton(use_button))
-
+            message_text += f"🔹 {item_name} (🖲️ Использовать)\n"
+        else:
+            message_text += f"🔹 {item}\n"
+    
+    
     # Добавляем стандартные кнопки
     markup.add(
         types.KeyboardButton("📥 Сохранить игру"),
@@ -35,8 +41,7 @@ def show_inventory(message):
         types.KeyboardButton("📖 Инструкция"),
         types.KeyboardButton("🔙 Вернуться в игру")
     )
-
-    bot.send_message(chat_id, ".", reply_markup=markup)
+    bot.send_message(chat_id, message_text, parse_mode="Markdown", reply_markup=markup)
 
 
 # ✅ Обработка нажатия на кнопку "Use"
