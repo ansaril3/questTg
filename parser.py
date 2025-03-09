@@ -28,24 +28,30 @@ def parse_action(line, usable_items, chapter_id, rest_data):
     if line.strip().startswith(';') or line.startswith('Pause'):
         return None  # Пропускаем комментарии и строки с Pause
 
-    if line_lower.startswith('pln'):
+    if line.lower().startswith('pln'):
         return {"type": "text", "value": line[4:].strip()}
 
-    elif line_lower.startswith('btn'):
+    elif line.lower().startswith('btn'):
         parts = line[4:].split(',', 1)
         if len(parts) == 2:
-            return {"type": "btn", "value": {"text": parts[1].strip(), "target": parts[0].strip()}}
+            return {
+                "type": "btn",
+                "value": {
+                    "text": parts[1].strip(),  # Текст кнопки сохраняем как есть
+                    "target": parts[0].strip().lower()  # Приводим target к нижнему регистру
+                }
+            }
         else:
             rest_data.append(f"{chapter_id}: {line}")
             return {"type": "unknown", "value": line}
 
-    elif line_lower.startswith('inv+') or line_lower.startswith('inv-'):
+    elif line.lower().startswith('inv+') or line.lower().startswith('inv-'):
         return parse_inventory_action(line, usable_items, rest_data, chapter_id)
 
-    elif line_lower.startswith('goto '):
-        return {"type": "goto", "value": line[5:].strip()}
+    elif line.lower().startswith('goto '):
+        return {"type": "goto", "value": line[5:].strip().lower()}  # Приводим к нижнему регистру
 
-    elif line_lower.startswith('if '):
+    elif line.lower().startswith('if '):
         return parse_if_action(line, usable_items, chapter_id, rest_data)
 
     elif line_lower.startswith('xbtn'):
@@ -72,7 +78,7 @@ def parse_inventory_action(line, usable_items, rest_data, chapter_id):
         if amount:
             return {"type": "gold", "value": f"+{amount[0]}" if line_lower.startswith('inv+') else f"-{amount[0]}"}
     else:
-        item = line[5:].strip()
+        item = line[5:].strip().lower()  # Приводим к нижнему регистру
         if item in usable_items:
             item += "[usable]"
         return {"type": "inventory", "value": f"inv+{item}" if line_lower.startswith('inv+') else f"inv-{item}"}
@@ -90,7 +96,7 @@ def parse_if_action(line, usable_items, chapter_id, rest_data):
     if "then" in line_lower:
         # Разделяем строку на условие и действия
         condition_part, actions_part = re.split(r'\bthen\b', line, flags=re.IGNORECASE, maxsplit=1)
-        condition = condition_part[3:].strip()  # Убираем "if" и лишние пробелы
+        condition = condition_part[3:].strip().lower()  # Приводим условие к нижнему регистру
 
         # Разделяем действия на then и else
         if "else" in line_lower:
@@ -130,7 +136,7 @@ def parse_if_action(line, usable_items, chapter_id, rest_data):
 def parse_xbtn_action(line, usable_items, chapter_id, rest_data):
     parts = [part.strip() for part in line[5:].split(',')]
     if len(parts) >= 2:
-        target = parts[0]
+        target = parts[0].lower()
         actions_xbtn = parts[1:-1]
         button_text = parts[-1]
 
@@ -144,8 +150,8 @@ def parse_xbtn_action(line, usable_items, chapter_id, rest_data):
                 parsed_xbtn_actions.append({
                     "type": "assign",
                     "value": {
-                        "key": key.strip(),
-                        "value": value.strip(),
+                        "key": key.strip().lower(),
+                        "value": value.strip().lower(),
                         "name": ""
                     }
                 })
@@ -174,15 +180,13 @@ def parse_image_action(line):
     return {"type": "image", "value": image_value}
 
 def parse_assign_action(line):
-    # Разделяем строку на ключ, значение и комментарий
     if '=' in line:
         parts = line.split(';', 1)  # Разделяем по первой точке с запятой
         key_value = parts[0].strip().split('=', 1)  # Разделяем ключ и значение
-        key = key_value[0].strip()
-        value = key_value[1].strip() if len(key_value) > 1 else ""
-        name = parts[1].strip() if len(parts) > 1 else ""  # Комментарий после ;
+        key = key_value[0].strip().lower()  # Приводим к нижнему регистру
+        value = key_value[1].strip().lower() if len(key_value) > 1 else ""  # Приводим к нижнему регистру
+        name = parts[1].strip() if len(parts) > 1 else ""  # Комментарий сохраняем как есть
 
-        # Возвращаем объект присваивания
         return {
             "type": "assign",
             "value": {
@@ -196,7 +200,7 @@ def parse_assign_action(line):
     
 def parse_chapter(chapter, usable_items, rest_data):
     lines = chapter.strip().split('\n')
-    chapter_id = lines[0].strip(':')
+    chapter_id = lines[0].strip(':').lower()  # Приводим к нижнему регистру
     actions = []
 
     for line in lines[1:]:
