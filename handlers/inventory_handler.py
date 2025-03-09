@@ -48,7 +48,7 @@ def handle_use_item(message):
 
     # Получаем название предмета (например, "Волшебный меч")
     item_name = message.text.replace("Use ", "").strip()
-    use_chapter_key = f"Use_{item_name}"
+    use_chapter_key = f"use_{item_name}"
 
     if use_chapter_key in chapters:
         state["chapter"] = use_chapter_key
