@@ -7,6 +7,8 @@ import telebot.types as types
 from collections import deque
 from datetime import datetime
 import os
+import random
+import re
 
 DATA_DIR = "data"  # 📂 Папка с изображениями
 # Команда /start (начало игры)
@@ -101,13 +103,23 @@ def execute_action(chat_id, state, action, buttons):
             state["gold"] += int(value[1:])
         elif value.startswith("-"):
             state["gold"] -= int(value[1:])
+        else:
+            try:
+                state["gold"] = int(value)  # ✅ Если без знака — задаём абсолютное значение
+            except Exception as e:
+                print(f"⚠️ Ошибка в обработке золота: {e}")
+
+        print(f"💰 Текущее золото: {state['gold']}")
+
 
     elif action_type == "assign":
         key = value["key"]
         new_value = value["value"]
         name = value.get("name", key)
-        local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
 
+        # ✅ Обрабатываем случайные значения вида RND12, RND6 и т.д.
+        new_value = re.sub(r'RND(\d+)', lambda m: str(random.randint(1, int(m.group(1)))), new_value)
+        local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
         try:
             new_value = int(new_value) if new_value.isdigit() else eval(new_value, {}, local_vars)
         except Exception as e:
@@ -132,6 +144,8 @@ def execute_action(chat_id, state, action, buttons):
         actions = value["actions"]
         else_actions = value.get("else_actions", [])
 
+        # ✅ Исправляем '=' на '==' для корректной проверки
+        condition = condition.replace("=", "==")
         local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
         try:
             if eval(condition, {}, local_vars):
