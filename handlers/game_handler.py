@@ -144,18 +144,39 @@ def execute_action(chat_id, state, action, buttons):
         actions = value["actions"]
         else_actions = value.get("else_actions", [])
 
-        # ✅ Исправляем '=' на '==' для корректной проверки
-        condition = condition.replace("=", "==")
-        local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
+        # ✅ Заменяем только одиночный знак '=' на '==', избегая порчи '>=', '<=', '!='
+        condition = re.sub(r'(?<![><!])=', '==', condition)
+
+        # ✅ Подготавливаем локальные переменные из state
+        local_vars = {}
+        for k, v in state["characteristics"].items():
+            try:
+                local_vars[k] = int(v["value"]) if isinstance(v["value"], (int, str)) and str(v["value"]).strip().replace('-', '').isdigit() else v["value"]
+            except Exception as e:
+                print(f"⚠️ Ошибка при преобразовании {k}: {e}")
+
+        print(f"✅ Проверка условия: {condition} | local_vars: {local_vars}")
+
         try:
-            if eval(condition, {}, local_vars):
-                for sub_action in actions:
-                    execute_action(chat_id, state, sub_action, buttons)
+            vars_in_condition = [
+            var for var in re.findall(r'[A-Za-z_][A-Za-z0-9_]*', condition)
+            if var not in {"and", "or", "not", "True", "False"}
+        ]
+            # ✅ Проверяем, что все переменные в условии присутствуют в локальных значениях
+            if all(var in local_vars for var in vars_in_condition):
+                if eval(condition, {}, local_vars):
+                    print(f"✅ Условие ИСТИННО: {condition}")
+                    for sub_action in actions:
+                        execute_action(chat_id, state, sub_action, buttons)
+                else:
+                    print(f"❌ Условие ЛОЖНО: {condition}")
+                    for sub_action in else_actions:
+                        execute_action(chat_id, state, sub_action, buttons)
             else:
-                for sub_action in else_actions:
-                    execute_action(chat_id, state, sub_action, buttons)
+                print(f"⚠️ Не все переменные найдены в local_vars для: {condition}")
         except Exception as e:
-            print(f"Ошибка в блоке if: {e}")
+            print(f"❌ Ошибка в блоке if: {e}")
+
 
     elif action_type == "image":
         image_path = DATA_DIR + value.replace("\\", "/")
