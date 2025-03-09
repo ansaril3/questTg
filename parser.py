@@ -174,24 +174,26 @@ def parse_image_action(line):
     return {"type": "image", "value": image_value}
 
 def parse_assign_action(line):
-    # Разделяем строку на ключ и значение
+    # Разделяем строку на ключ, значение и комментарий
     if '=' in line:
-        key_value = line.split('=', 1)
+        parts = line.split(';', 1)  # Разделяем по первой точке с запятой
+        key_value = parts[0].strip().split('=', 1)  # Разделяем ключ и значение
         key = key_value[0].strip()
-        value = key_value[1].strip()
+        value = key_value[1].strip() if len(key_value) > 1 else ""
+        name = parts[1].strip() if len(parts) > 1 else ""  # Комментарий после ;
 
         # Возвращаем объект присваивания
         return {
             "type": "assign",
             "value": {
                 "key": key,
-                "value": value,  # Сохраняем значение как строку
-                "name": ""  # Дополнительное поле (если нужно)
+                "value": value,
+                "name": name
             }
         }
     else:
         return None  # Если нет '=', это не присваивание
-
+    
 def parse_chapter(chapter, usable_items, rest_data):
     lines = chapter.strip().split('\n')
     chapter_id = lines[0].strip(':')
