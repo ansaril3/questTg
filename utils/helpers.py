@@ -140,12 +140,13 @@ def replace_variables(var_name, state):
 
 def replace_variables_in_text(state, text):
     def replace_match(match):
-        key = match.group(1)
+        key = match.group(1).lower()  # ✅ Переводим в нижний регистр
         value = state["characteristics"].get(key, {}).get("value", None)
         if value is not None:
             return str(value)
         return match.group(0)  # Если нет значения — оставляем шаблон как есть
     
-    # Ищем шаблоны вида #M1$, #V1$ и заменяем их на значения из характеристик
+    # ✅ Ищем шаблоны вида #M1$, #V1$, #m1$ и заменяем их на значения из характеристик
     return re.sub(r'#([A-Za-z0-9_]+)\$', replace_match, text)
+
 
