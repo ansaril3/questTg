@@ -105,7 +105,7 @@ def execute_action(chat_id, state, action, buttons):
     elif action_type == "gold":
         handle_gold(state, value)
     elif action_type == "assign":
-        handle_assign(state, value)
+        handle_assign(state, value, chat_id)
     elif action_type == "goto":
         handle_goto(chat_id, state, value)
     elif action_type == "image":
@@ -159,8 +159,8 @@ def handle_gold(state, value):
     except Exception as e:
         print(f"⚠️ Ошибка в обработке золота: {e}")
 
-def handle_assign(state, value):
-    key = value["key"]
+def handle_assign(state, value, chat_id):
+    key = value["key"].lower()   # 👈 Приводим к нижнему регистру
     new_value = value["value"]
     name = value.get("name", key)
 
@@ -175,6 +175,10 @@ def handle_assign(state, value):
         new_value = state["characteristics"].get(key, {"value": 0})["value"]
 
     state["characteristics"][key] = {"name": name, "value": new_value}
+
+    # 🚀 Принудительное сохранение состояния после обновления переменной
+    save_state(chat_id, state)
+    print(f"✅ handle_assign | Сохранено значение {key} = {new_value}")
 
 def handle_goto(chat_id, state, value):
     if value == "return":

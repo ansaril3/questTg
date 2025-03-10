@@ -139,14 +139,32 @@ def replace_variables(var_name, state):
     return "False"
 
 def replace_variables_in_text(state, text):
+    # ✅ Приводим все ключи к нижнему регистру
+    state["characteristics"] = {k.lower(): v for k, v in state["characteristics"].items()}
+    
+
     def replace_match(match):
         key = match.group(1).lower()  # ✅ Переводим в нижний регистр
-        value = state["characteristics"].get(key, {}).get("value", None)
-        if value is not None:
-            return str(value)
-        return match.group(0)  # Если нет значения — оставляем шаблон как есть
+        print(f"helper | var_name : {key}")
+
+        if key in state["characteristics"]:
+            print("helper | its characteristic!")  # ✅ Лог успешного совпадения
+            value = state["characteristics"][key].get("value", None)
+            if value is not None:
+                print(f"helper | value found for {key}: {value}")
+                return str(value)
+            else:
+                print(f"helper | no value for {key}")
+        else:
+            print(f"helper | {key} not found in state['characteristics']")
+
+        # Если нет значения — оставляем шаблон как есть
+        return match.group(0)
     
-    # ✅ Ищем шаблоны вида #M1$, #V1$, #m1$ и заменяем их на значения из характеристик
-    return re.sub(r'#([A-Za-z0-9_]+)\$', replace_match, text)
+    # ✅ Заменяем регистронезависимо
+    processed_text = re.sub(r'#([A-Za-z0-9_]+)\$', replace_match, text, flags=re.IGNORECASE)
+
+    print(f"helper | processed_text: {processed_text}")  # ✅ Лог готового текста
+    return processed_text
 
 
