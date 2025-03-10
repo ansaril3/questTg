@@ -32,6 +32,14 @@ def start_game(message):
 # ✅ Отправка главы игроку
 def send_chapter(chat_id):
     state = load_state(chat_id)
+
+    # 🚨 Если был вызван `end` — немедленно выходим
+    if state.get("end_triggered"):
+        print("🚨 Выполнение остановлено из-за действия 'end'")
+        state["end_triggered"] = False
+        save_state(chat_id, state)
+        return
+    
     chapter_key = state["chapter"]
     chapter = chapters.get(chapter_key)
     print(f"------------------------CHAPTER: {chapter_key}")
@@ -47,6 +55,13 @@ def send_chapter(chat_id):
     for action in chapter:
         print(f"------ACTION: {str(action)[:60]}{'...' if len(str(action)) > 60 else ''}")
         execute_action(chat_id, state, action, buttons)
+
+        # 🚨 Если `end` сработал внутри выполнения — прерываем цикл
+        if state.get("end_triggered"):
+            print("🚨 Выполнение цикла остановлено из-за действия 'end'")
+            state["end_triggered"] = False
+            save_state(chat_id, state)
+            return
 
     # Отправляем кнопки после выполнения всех действий
     send_buttons(chat_id, buttons)
@@ -86,7 +101,6 @@ def execute_action(chat_id, state, action, buttons):
     elif action_type == "xbtn":
         handle_xbtn(chat_id, state, value, buttons)
     elif action_type == "inventory":
-        print(f"🔎 Вызов handle_inventory с параметром: {value}")
         handle_inventory(state, value)
     elif action_type == "gold":
         handle_gold(state, value)
@@ -98,6 +112,15 @@ def execute_action(chat_id, state, action, buttons):
         handle_image(chat_id, value)
     elif action_type == "if":
         handle_if(chat_id, state, value, buttons)
+    elif action_type == "end":
+        if state["history"]:
+            state["chapter"] = state["history"].pop()
+            state["options"] = {}
+            state["end_triggered"] = True
+            save_state(chat_id, state)
+            send_chapter(chat_id)
+            # 🚨 Немедленно завершаем выполнение действий
+            return
 
 
 # ✅ Обработчики конкретных действий
