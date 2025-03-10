@@ -32,21 +32,45 @@ class TestBot(unittest.TestCase):
 
     def send_message_and_check(self, message_text):
         """Имитация нажатия кнопки (без отправки в Telegram)"""
-        message = type("Message", (), {"chat": type("Chat", (), {"id": self.chat_id}), "text": message_text})
+        message = type(
+            "Message", 
+            (), 
+            {"chat": type("Chat", (), {"id": self.chat_id}), "text": message_text}
+        )
         try:
             with patch("telebot.TeleBot.send_message", new=MagicMock()), \
-                 patch("telebot.TeleBot.send_photo", new=MagicMock()):
-                handle_choice(message)  # Имитируем клик по кнопке
+                 patch("telebot.TeleBot.send_photo", new=MagicMock()), \
+                 patch("telebot.TeleBot.send_document", new=MagicMock()), \
+                 patch("telebot.TeleBot.send_video", new=MagicMock()), \
+                 patch("telebot.TeleBot.send_audio", new=MagicMock()):
+                handle_choice(message)  # Имитируем нажатие кнопки
             return True
         except Exception as e:
-            print(f"❌ Ошибка на {self.state['chapter']} при нажатии '{message_text}': {e}")
+            print(f"❌ Ошибка в '{self.state['chapter']}' при нажатии '{message_text}': {e}")
             return False
+
+    def extract_options_from_chapter(self, chapter_key):
+        """Получаем список кнопок из главы"""
+        chapter = chapters.get(chapter_key.lower(), [])
+        options = {}
+        for action in chapter:
+            action_type = action["type"]
+            value = action["value"]
+
+            # ✅ Поддержка кнопок в формате JSON
+            if action_type in ("btn", "xbtn"):
+                options[value["text"]] = value["target"].lower()
+        return options
 
     def traverse_chapters(self, chapter_key):
         """Рекурсивный обход всех глав"""
+        chapter_key = chapter_key.lower()
+
         if chapter_key in self.visited_chapters:
             return
+        
         self.visited_chapters.add(chapter_key)
+        print(f"✅ Тестируем главу: {chapter_key}")
 
         # Устанавливаем текущую главу
         self.state["chapter"] = chapter_key
@@ -64,16 +88,17 @@ class TestBot(unittest.TestCase):
                 print(f"❌ Ошибка в send_chapter({chapter_key}): {e}")
                 return  # Если глава вызывает ошибку, выходим
 
-        # Проходим по кнопкам главы
-        chapter = chapters.get(chapter_key, {})
-        if "options" in chapter:
-            for button_text, next_chapter in chapter["options"].items():
-                if self.send_message_and_check(button_text):  # Проверяем, не падает ли бот
-                    self.traverse_chapters(next_chapter)  # Рекурсивно идем дальше
+        # Получаем все кнопки из главы
+        options = self.extract_options_from_chapter(chapter_key)
+        for button_text, next_chapter in options.items():
+            print(f"➡️ Нажимаем кнопку: '{button_text}' → '{next_chapter}'")
+            if self.send_message_and_check(button_text):  # Проверяем корректный переход по кнопкам
+                self.traverse_chapters(next_chapter)  # Рекурсивно переходим к следующей главе
 
     def test_bot(self):
         """Основной тест: проходит по всем главам"""
-        self.traverse_chapters(self.state["chapter"])  # ⚡️ Больше не требует `asyncio`
+        start_chapter = self.state["chapter"].lower()
+        self.traverse_chapters(start_chapter)  # ⚡️ Рекурсивный обход всех глав
 
 
 if __name__ == "__main__":
