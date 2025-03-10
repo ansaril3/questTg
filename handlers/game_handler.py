@@ -142,7 +142,7 @@ def handle_assign(state, value):
     name = value.get("name", key)
 
     # Обработка случайных значений типа RND12
-    new_value = re.sub(r'RND(\d+)', lambda m: str(random.randint(1, int(m.group(1)))), new_value)
+    new_value = re.sub(r'rnd(\d+)', lambda m: str(random.randint(1, int(m.group(1)))), new_value)
 
     local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
     try:
