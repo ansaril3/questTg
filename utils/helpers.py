@@ -1,30 +1,35 @@
-# Вспомогательные функции (рандом, условия)
-
 import random
 import re
 
-# Генерация случайного числа (например, RND6)
+# ✅ Генерация случайного числа (например, RND6)
 def roll_dice(expression):
-    if expression.startswith("RND"):
-        dice_max = int(expression[3:])
-        return random.randint(1, dice_max)
-    return int(expression)
+    try:
+        if expression.startswith("rnd"):
+            dice_max = int(expression[3:])
+            return random.randint(1, dice_max)
+        return int(expression)
+    except ValueError:
+        print(f"⚠️ Ошибка в roll_dice: Неверный формат выражения {expression}")
+        return 0
 
-# Вычисление значения характеристики
+# ✅ Вычисление значения характеристики
 def calculate_characteristic(expression, state):
     tokens = expression.split()
     total = 0
 
     for token in tokens:
-        if token.startswith("RND"):
+        if token.startswith("rnd"):
             total += roll_dice(token)
         elif token in state["characteristics"]:
             total += state["characteristics"][token]["value"]
-        elif token.isdigit() or (token[1:].isdigit() and token[0] in "+-"):
+        elif token.lstrip("+-").isdigit():
             total += int(token)
-    
+        else:
+            print(f"⚠️ Ошибка в calculate_characteristic: Некорректный токен '{token}'")
+
     return total
 
+# ✅ Проверка условий и формирование действий (работает только с памятью)
 def check_conditions(state, conditions):
     buttons = []
     actions = []
@@ -35,10 +40,10 @@ def check_conditions(state, conditions):
         print(f"helper | check_conditions | condition: {condition}")
 
         if evaluate_condition(state, condition):
-            print("helper | check_conditions | condition is true")
+            print("✅ Условие истинно")
             for action in actions_list:
                 action_type = action["type"]
-                print(f"helper | check_conditions | action: {action}, type: {action_type}")
+                print(f"✅ Выполняется действие: {action}")
 
                 if action_type == "btn":
                     buttons.append({"target": action["target"], "text": action["text"]})
@@ -53,118 +58,126 @@ def check_conditions(state, conditions):
                     actions.append({"type": "assign", "key": action["key"], "value": action["value"]})
 
                 elif action_type == "xbtn":
-                    buttons.append({"text": action["text"], "target": action["target"], "actions": action["actions"]})
-               
-                elif action_type == "inv+":
-                    process_inventory_action(state, f"inv+ {action['item']}")  # ✅ Добавляем предмет в инвентарь
-                elif action_type == "inv-":
-                    process_inventory_action(state, f"inv- {action['item']}")  # ✅ Удаляем предмет из инвентаря
-                # Обработка действий с инвентарём
-                if "inv_action" in action and action_type != "xbtn":
-                    process_inventory_action(state, action["inv_action"])
+                    buttons.append({
+                        "text": action["text"],
+                        "target": action["target"],
+                        "actions": action["actions"]
+                    })
+                
+                # ✅ Убираем дублирование вызова process_inventory_action
+                if action_type in ["inv+", "inv-"]:
+                    process_inventory_action(state, f"{action_type} {action['item']}")
 
     return buttons, actions
 
-# Обработка инвентарных действий (Inv+ / Inv- / Invkill)
+# ✅ Обработка инвентарных действий напрямую через память
 def process_inventory_action(state, action):
-    print(f"🔎 Вызов process_inventory_action: action={action}")
     if not action:
         print(f"⚠️ Пустое значение инвентаря: {action}")
         return
 
     if action.startswith("inv+"):
-        item = action[4:].strip()  # Отрезаем "inv+" и обрезаем пробелы
+        item = action[4:].strip()
         if item and item not in state["inventory"]:
             state["inventory"].append(item)
             print(f"✅ Добавлен предмет в инвентарь: {item}")
 
     elif action.startswith("inv-"):
-        item = action[4:].strip()  # Отрезаем "inv-" и обрезаем пробелы
-        if item and item in state["inventory"]:
+        item = action[4:].strip()
+        if item in state["inventory"]:
             state["inventory"].remove(item)
             print(f"✅ Удалён предмет из инвентаря: {item}")
     else:
         print(f"⚠️ Некорректный формат инвентаря: {action}")
- 
+
+# ✅ Оценка условий (работает напрямую через стейт в памяти)
 
 def evaluate_condition(state, condition):
-    # Сначала обрабатываем сложные операторы (>=, <=, !=), чтобы не ломать их при замене '='
+    # ✅ Сначала обрабатываем сложные операторы (>=, <=, !=)
     condition = condition.replace(">=", "⩾").replace("<=", "⩽").replace("!=", "≠")
-    
-    # Заменяем одиночный `=` на `==`
+
+    # ✅ Заменяем одиночное "=" на "=="
     condition = condition.replace("=", "==")
 
-    # Восстанавливаем операторы обратно
+    # ✅ Восстанавливаем операторы обратно
     condition = condition.replace("⩾", ">=").replace("⩽", "<=").replace("≠", "!=")
 
-    # Обрабатываем переменные, избегая чисел и составных названий предметов
+    # ✅ Заменяем переменные на значения
     def replace_variables_safe(match):
         var_name = match.group(1)
-        if var_name.isdigit():  # Если число, не заменяем
+        if var_name.isdigit():
             return var_name
         return replace_variables(var_name, state)
 
-    # Ищем переменные (характеристики или предметы) и заменяем на их значения
-    condition = re.sub(r'\b([A-Za-zА-Яа-яёЁ0-9_]+(?:\s+[A-Za-zА-Яа-яёЁ0-9_]+)*)\b', replace_variables_safe, condition)
+    condition = re.sub(r'\b([A-Za-z0-9_]+)\b', replace_variables_safe, condition)
 
-    # Восстанавливаем логические операторы после подстановки
+    # ✅ Заменяем логические операторы
     condition = condition.replace("&&", " and ").replace("||", " or ")
+
     try:
-        result = eval(condition)
-        print(f"helper |  {condition} result: {result}")
-        return result  # Проверяем, истинно ли условие
-    except Exception as e:
-        print(f"helper | eval error: {e}")
-        return False  # Если ошибка — условие не выполняется
+        # ✅ Ограничиваем eval только значениями из характеристик (для безопасности)
+        local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
+        result = eval(condition, {}, local_vars)
+        print(f"✅ Условие: {condition} → {result}")
+        return bool(result)
+    except (SyntaxError, ValueError, NameError) as e:
+        print(f"⚠️ Ошибка в evaluate_condition: {e}")
+        return False
 
-# Функция для подстановки значений характеристик и проверки инвентаря
+# ✅ Подстановка переменных (остается без изменений)
 def replace_variables(var_name, state):
-    print(f"helper | var_name : {var_name}")
+    var_name_lower = var_name.lower()
 
-    var_name_lower = var_name.lower()  # Приводим к нижнему регистру
+    # ✅ Проверяем в характеристиках
+    if var_name_lower in state["characteristics"]:
+        value = state["characteristics"][var_name_lower].get("value", 0)
+        print(f"✅ Подстановка из характеристик: {var_name} = {value}")
+        return str(value)
 
-    # Проверяем, является ли переменная характеристикой
-    if var_name in state["characteristics"]:
-        print(f"helper | its characteristic!")
-        return str(state["characteristics"].get(var_name, {"value": 0})["value"])
-
-    # Проверяем, есть ли предмет в инвентаре (без учета регистра)
-    inventory_lower = [item.lower() for item in state["inventory"]]
-    if var_name_lower in inventory_lower:
-        print(f"helper | its in inventory!")
+    # ✅ Проверяем в инвентаре (без учёта регистра)
+    if var_name_lower in [item.lower() for item in state["inventory"]]:
+        print(f"✅ Подстановка из инвентаря: {var_name} = True")
         return "True"
 
-    # Если переменная не найдена, возвращаем "False" (предмета нет)
-    print(f"helper | variable didn't found")
+    print(f"⚠️ Переменная {var_name} не найдена")
     return "False"
 
+# ✅ Подстановка переменных (работает только со стейтом в памяти)
+def replace_variables(var_name, state):
+    var_name_lower = var_name.lower()
+
+    # ✅ Проверяем в характеристиках
+    if var_name_lower in state["characteristics"]:
+        value = state["characteristics"].get(var_name_lower, {}).get("value", 0)
+        print(f"✅ Подстановка из характеристик: {var_name} = {value}")
+        return str(value)
+
+    # ✅ Проверяем в инвентаре (без учёта регистра)
+    if var_name_lower in [item.lower() for item in state["inventory"]]:
+        print(f"✅ Подстановка из инвентаря: {var_name} = True")
+        return "True"
+
+    print(f"⚠️ Переменная {var_name} не найдена")
+    return "False"
+
+# ✅ Подстановка переменных в текст напрямую через стейт в памяти
 def replace_variables_in_text(state, text):
-    # ✅ Приводим все ключи к нижнему регистру
+    # ✅ Приводим ключи характеристик к нижнему регистру
     state["characteristics"] = {k.lower(): v for k, v in state["characteristics"].items()}
     
-
     def replace_match(match):
-        key = match.group(1).lower()  # ✅ Переводим в нижний регистр
-        print(f"helper | var_name : {key}")
-
+        key = match.group(1).lower()
         if key in state["characteristics"]:
-            print("helper | its characteristic!")  # ✅ Лог успешного совпадения
-            value = state["characteristics"][key].get("value", None)
+            value = state["characteristics"].get(key, {}).get("value")
             if value is not None:
-                print(f"helper | value found for {key}: {value}")
+                print(f"✅ Подстановка значения {key} → {value}")
                 return str(value)
             else:
-                print(f"helper | no value for {key}")
-        else:
-            print(f"helper | {key} not found in state['characteristics']")
-
-        # Если нет значения — оставляем шаблон как есть
+                print(f"⚠️ Значение для {key} отсутствует")
         return match.group(0)
     
-    # ✅ Заменяем регистронезависимо
+    # ✅ Подставляем значения в текст
     processed_text = re.sub(r'#([A-Za-z0-9_]+)\$', replace_match, text, flags=re.IGNORECASE)
-
-    print(f"helper | processed_text: {processed_text}")  # ✅ Лог готового текста
+    
+    print(f"✅ Обработанный текст: {processed_text}")
     return processed_text
-
-

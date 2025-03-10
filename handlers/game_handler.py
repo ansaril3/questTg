@@ -1,5 +1,5 @@
 from config import bot, chapters, first_chapter  
-from utils.state_manager import load_state, save_state, SAVES_LIMIT
+from utils.state_manager import load_state, save_state, clear_state, state_cache, SAVES_LIMIT
 from utils.helpers import check_conditions, calculate_characteristic, process_inventory_action, replace_variables_in_text, evaluate_condition
 import telebot.types as types
 from collections import deque
@@ -7,37 +7,36 @@ from datetime import datetime
 import os
 import random
 import re
-from collections import deque
 
 DATA_DIR = "data"  # 📂 Папка с изображениями
 HISTORY_LIMIT = 10 # ✅ Максимальный размер стека для истории переходов
 
+# ✅ Начало игры
 @bot.message_handler(commands=['start'])
 def start_game(message):
     user_id = message.chat.id
-    state = {
-        "chapter": first_chapter,
-        "instruction": None,
-        "inventory": [],
-        "gold": 0,
-        "characteristics": {},
-        "saves": deque([], maxlen=SAVES_LIMIT),
-        "options": {},
-        "history": deque([], maxlen=HISTORY_LIMIT)  # ✅ Стек для истории переходов
-    }
-    save_state(user_id, state)
-    send_chapter(user_id)
+    if user_id not in state_cache:
+        state = load_state(user_id)
+    else:
+        state = state_cache[user_id]
 
+    state["chapter"] = first_chapter
+    state["instruction"] = None
+    state["inventory"] = []
+    state["gold"] = 0
+    state["characteristics"] = {}
+    state["saves"] = deque([], maxlen=SAVES_LIMIT)
+    state["history"] = deque([], maxlen=HISTORY_LIMIT)
+    state["options"] = {}
+
+    send_chapter(user_id)
 
 # ✅ Отправка главы игроку
 def send_chapter(chat_id):
-    state = load_state(chat_id)
+    state = state_cache[chat_id]
 
-    # 🚨 Если был вызван `end` — немедленно выходим
     if state.get("end_triggered"):
-        print("🚨 Выполнение остановлено из-за действия 'end'")
         state["end_triggered"] = False
-        save_state(chat_id, state)
         return
     
     chapter_key = state["chapter"]
@@ -51,32 +50,24 @@ def send_chapter(chat_id):
     state["options"] = {}
     buttons = []
 
-    # Выполняем все действия главы
     for action in chapter:
         print(f"------ACTION: {str(action)[:60]}{'...' if len(str(action)) > 60 else ''}")
         execute_action(chat_id, state, action, buttons)
 
-        # 🚨 Если `end` сработал внутри выполнения — прерываем цикл
         if state.get("end_triggered"):
-            print("🚨 Выполнение цикла остановлено из-за действия 'end'")
             state["end_triggered"] = False
-            save_state(chat_id, state)
             return
 
-    # Отправляем кнопки после выполнения всех действий
     send_buttons(chat_id, buttons)
-    save_state(chat_id, state)
 
 # ✅ Общая функция отправки кнопок
 def send_buttons(chat_id, buttons):
     if not buttons:
-        print("⚠️ Нет кнопок для отображения")
         return
 
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
     markup.add(*buttons)
 
-    # ✅ Добавляем стандартные кнопки
     markup.add(
         types.KeyboardButton("📥 Сохранить игру"),
         types.KeyboardButton("📤 Загрузить игру"),
@@ -85,9 +76,7 @@ def send_buttons(chat_id, buttons):
         types.KeyboardButton("📊 Характеристики"),
     )
 
-    print(f"📌 Отправляю кнопки: {[btn.text for btn in buttons]}")
     bot.send_message(chat_id, ".", reply_markup=markup)
-
 
 # ✅ Общая обработка действия
 def execute_action(chat_id, state, action, buttons):
@@ -105,7 +94,7 @@ def execute_action(chat_id, state, action, buttons):
     elif action_type == "gold":
         handle_gold(state, value)
     elif action_type == "assign":
-        handle_assign(state, value, chat_id)
+        handle_assign(state, value)
     elif action_type == "goto":
         handle_goto(chat_id, state, value)
     elif action_type == "image":
@@ -117,15 +106,12 @@ def execute_action(chat_id, state, action, buttons):
             state["chapter"] = state["history"].pop()
             state["options"] = {}
             state["end_triggered"] = True
-            save_state(chat_id, state)
             send_chapter(chat_id)
-            # 🚨 Немедленно завершаем выполнение действий
             return
 
-
-# ✅ Обработчики конкретных действий
+# ✅ Обработчики действий
 def handle_text(chat_id, value):
-    state = load_state(chat_id)
+    state = state_cache[chat_id]
     new_value = replace_variables_in_text(state, value)
     bot.send_message(chat_id, new_value)
 
@@ -137,14 +123,10 @@ def handle_xbtn(chat_id, state, value, buttons):
     buttons.append(types.KeyboardButton(value["text"]))
     state["options"][value["text"]] = value["target"]
 
-    # ✅ Сохраняем вложенные действия для выполнения при нажатии на кнопку
     if "actions" in value:
         state["options"][f"{value['text']}_actions"] = value["actions"]
-        print(f"✅ Сохранены вложенные действия для {value['text']}: {value['actions']}")
-
 
 def handle_inventory(state, value):
-    print(f"🔎 Вызов handle_inventory: {value}")
     process_inventory_action(state, value)
 
 def handle_gold(state, value):
@@ -155,49 +137,35 @@ def handle_gold(state, value):
             state["gold"] -= int(value[1:])
         else:
             state["gold"] = int(value)
-        print(f"💰 Текущее золото: {state['gold']}")
     except Exception as e:
-        print(f"⚠️ Ошибка в обработке золота: {e}")
+        print(f"Ошибка в обработке золота: {e}")
 
-def handle_assign(state, value, chat_id):
-    key = value["key"].lower()   # 👈 Приводим к нижнему регистру
+def handle_assign(state, value):
+    key = value["key"].lower()
     new_value = value["value"]
     name = value.get("name", key)
 
-    # Обработка случайных значений типа RND12
     new_value = re.sub(r'rnd(\d+)', lambda m: str(random.randint(1, int(m.group(1)))), new_value)
 
     local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
     try:
         new_value = int(new_value) if new_value.isdigit() else eval(new_value, {}, local_vars)
     except Exception as e:
-        print(f"Ошибка в assign: {e}")
         new_value = state["characteristics"].get(key, {"value": 0})["value"]
 
     state["characteristics"][key] = {"name": name, "value": new_value}
 
-    # 🚀 Принудительное сохранение состояния после обновления переменной
-    save_state(chat_id, state)
-    print(f"✅ handle_assign | Сохранено значение {key} = {new_value}")
-
 def handle_goto(chat_id, state, value):
     if value == "return":
         if state["history"]:
-            # ✅ Переход на предыдущую главу из истории
             state["chapter"] = state["history"].pop()
-            save_state(chat_id, state)
             send_chapter(chat_id)
-        else:
-            bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
         return
     
-    if value and value in chapters:
-        # ✅ Добавляем текущую главу в стек перед переходом
+    if value in chapters:
         state["history"].append(state["chapter"])
         state["chapter"] = value
-        save_state(chat_id, state)
         send_chapter(chat_id)
-
 
 def handle_image(chat_id, value):
     image_path = DATA_DIR + value.replace("\\", "/")
@@ -213,20 +181,18 @@ def handle_if(chat_id, state, value, buttons):
     else_actions = value.get("else_actions", [])
 
     if evaluate_condition(state, condition):
-        print(f"✅ Условие ИСТИННО: {condition}")
         for sub_action in actions:
             execute_action(chat_id, state, sub_action, buttons)
     else:
-        print(f"❌ Условие ЛОЖНО: {condition}")
         for sub_action in else_actions:
             execute_action(chat_id, state, sub_action, buttons)
 
 # ✅ Получаем все доступные варианты кнопок
 def get_all_options():
     return {
-        option 
+        option
         for chapter in chapters.values()
-        for action in chapter 
+        for action in chapter
         if action["type"] in ("btn", "xbtn")
         for option in [action["value"]["text"]]
     }
@@ -235,7 +201,7 @@ def get_all_options():
 @bot.message_handler(func=lambda message: message.text in get_all_options())
 def handle_choice(message):
     chat_id = message.chat.id
-    state = load_state(chat_id)
+    state = state_cache[chat_id]
     chapter_key = state["chapter"]
     chapter = chapters.get(chapter_key)
 
@@ -243,40 +209,20 @@ def handle_choice(message):
         if action["type"] in ("btn", "xbtn") and action["value"]["text"] == message.text:
             target = action["value"]["target"]
 
-            # ✅ Выполняем вложенные действия перед переходом
             actions = state["options"].get(f"{message.text}_actions")
             if actions:
-                print(f"✅ Выполняю вложенные действия для {message.text}: {actions}")
-
                 buttons = []
                 for sub_action in actions:
                     execute_action(chat_id, state, sub_action, buttons)
-
-                # ✅ Сохраняем изменения состояния после выполнения
-                save_state(chat_id, state)
                 send_buttons(chat_id, buttons)
-
-            # ✅ Выполняем переход только после выполнения вложенных действий
-            if target == "return":
-                if state["history"]:
-                    state["chapter"] = state["history"].pop()
-                    save_state(chat_id, state)
-                    send_chapter(chat_id)
-                else:
-                    bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
-                return
 
             if target in chapters:
                 state["history"].append(state["chapter"])
                 state["chapter"] = target
-                save_state(chat_id, state)
                 send_chapter(chat_id)
                 return
 
-            return
-
     bot.send_message(chat_id, "⚠️ Некорректный выбор. Попробуйте снова.")
-
 # ✅ Сохранение текущего состояния игрока
 @bot.message_handler(func=lambda message: message.text == "📥 Сохранить игру")
 def save_game(message):
