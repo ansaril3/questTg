@@ -52,6 +52,10 @@ def handle_use_item(message):
     use_chapter_key = f"use_{item_name}"
 
     if use_chapter_key in chapters:
+        # ✅ Добавляем текущую главу в историю перед переходом
+        if state["history"] and state["history"][-1] != state["chapter"]:
+            state["history"].append(state["chapter"])
+
         state["chapter"] = use_chapter_key
         save_state(chat_id, state)
         from handlers.game_handler import send_chapter
