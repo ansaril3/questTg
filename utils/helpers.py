@@ -102,17 +102,23 @@ def evaluate_condition(state, condition):
     # ✅ Восстанавливаем операторы обратно
     condition = condition.replace("⩾", ">=").replace("⩽", "<=").replace("≠", "!=")
 
-    # ✅ Заменяем переменные на значения
+    # ✅ Логические операторы НЕ ТРОГАЕМ
+    condition = condition.replace("&&", " and ").replace("||", " or ")
+
+    # ✅ Список логических операторов
+    logical_operators = {"and", "or", "not"}
+
+    # ✅ Заменяем переменные на значения (исключая логические операторы)
     def replace_variables_safe(match):
         var_name = match.group(1)
+        if var_name in logical_operators:
+            return var_name  # Не заменяем логические операторы
         if var_name.isdigit():
             return var_name
         return replace_variables(var_name, state)
 
+    # ✅ Заменяем переменные через регулярное выражение
     condition = re.sub(r'\b([A-Za-z0-9_]+)\b', replace_variables_safe, condition)
-
-    # ✅ Заменяем логические операторы
-    condition = condition.replace("&&", " and ").replace("||", " or ")
 
     try:
         # ✅ Ограничиваем eval только значениями из характеристик (для безопасности)

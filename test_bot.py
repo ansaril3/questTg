@@ -74,7 +74,7 @@ class TestBot(unittest.TestCase):
 
         # Устанавливаем текущую главу
         self.state["chapter"] = chapter_key
-        save_state(self.chat_id, self.state)
+        save_state(self.chat_id)
 
         # 🛠 Полностью подменяем `send_message()`, `send_photo()`, `send_document()`
         with patch("telebot.TeleBot.send_message", new=MagicMock()), \
