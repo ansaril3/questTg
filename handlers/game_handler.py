@@ -42,11 +42,13 @@ def send_chapter(chat_id):
 
     for action in chapter:
         print(f"------ACTION: {str(action)[:60]}{'...' if len(str(action)) > 60 else ''}")
+        
         execute_action(chat_id, state, action, buttons)
 
+        # ✅ Остановка выполнения, если сработал end
         if state.get("end_triggered"):
             state["end_triggered"] = False
-            return
+            break
 
     send_buttons(chat_id, buttons)
 
@@ -95,13 +97,10 @@ def execute_action(chat_id, state, action, buttons):
     elif action_type == "if":
         handle_if(chat_id, state, value, buttons)
     elif action_type == "end":
-        if state["history"]:
-            state["chapter"] = state["history"].pop()
-            state["options"] = {}
-            state["end_triggered"] = True
-            send_chapter(chat_id)
-            return
+        state["end_triggered"] = True
+        return
 
+            
 
 # ✅ Обработчики действий
 def handle_text(chat_id, value):
