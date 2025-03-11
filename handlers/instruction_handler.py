@@ -1,5 +1,5 @@
 from config import bot, instructions, first_instruction, chapters
-from utils.state_manager import state_cache
+from utils.state_manager import state_cache, get_state
 from handlers.game_handler import send_chapter
 import telebot.types as types
 import os
@@ -98,7 +98,7 @@ def send_instruction_keyboard(chat_id, state):
 @bot.message_handler(func=lambda message: message.text == "📖 Инструкция")
 def enter_instruction(message):
     chat_id = message.chat.id
-    state = state_cache[chat_id]  # ✅ Работа напрямую со стейтом в памяти
+    state = get_state(chat_id)  # ✅ Работа напрямую со стейтом в памяти
     state["instruction"] = first_instruction  # Начинаем с первой инструкции
     send_instruction(chat_id)
 

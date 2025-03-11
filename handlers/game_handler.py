@@ -1,5 +1,5 @@
-from config import bot, chapters, first_chapter  
-from utils.state_manager import load_state, save_state, clear_state, state_cache, SAVES_LIMIT
+from config import bot, chapters  
+from utils.state_manager import load_specific_state, save_state, get_state, state_cache, SAVES_LIMIT, SAVES_DIR
 from utils.helpers import check_conditions, calculate_characteristic, process_inventory_action, replace_variables_in_text, evaluate_condition
 import telebot.types as types
 from collections import deque
@@ -7,6 +7,7 @@ from datetime import datetime
 import os
 import random
 import re
+import json
 
 DATA_DIR = "data"  # 📂 Папка с изображениями
 HISTORY_LIMIT = 10 # ✅ Максимальный размер стека для истории переходов
@@ -15,20 +16,7 @@ HISTORY_LIMIT = 10 # ✅ Максимальный размер стека для
 @bot.message_handler(commands=['start'])
 def start_game(message):
     user_id = message.chat.id
-    if user_id not in state_cache:
-        state = load_state(user_id)
-    else:
-        state = state_cache[user_id]
-
-    state["chapter"] = first_chapter
-    state["instruction"] = None
-    state["inventory"] = []
-    state["gold"] = 0
-    state["characteristics"] = {}
-    state["saves"] = deque([], maxlen=SAVES_LIMIT)
-    state["history"] = deque([], maxlen=HISTORY_LIMIT)
-    state["options"] = {}
-
+    state = get_state(user_id)
     send_chapter(user_id)
 
 # ✅ Отправка главы игроку
@@ -201,20 +189,41 @@ def get_all_options():
 @bot.message_handler(func=lambda message: message.text in get_all_options())
 def handle_choice(message):
     chat_id = message.chat.id
-    state = state_cache[chat_id]
+    
+    # ✅ Загружаем состояние через get_state()
+    state = get_state(chat_id)
+
     chapter_key = state["chapter"]
     chapter = chapters.get(chapter_key)
 
+    if not chapter:
+        bot.send_message(chat_id, "⚠️ Ошибка: глава не найдена.")
+        return
+
     for action in chapter:
-        if action["type"] in ("btn", "xbtn") and action["value"]["text"] == message.text:
+        if action["type"] in ["btn", "xbtn"] and action["value"]["text"] == message.text:
             target = action["value"]["target"]
 
+            # ✅ Выполняем вложенные действия перед переходом
             actions = state["options"].get(f"{message.text}_actions")
             if actions:
+                print(f"✅ Выполняю вложенные действия для {message.text}: {actions}")
+
                 buttons = []
                 for sub_action in actions:
                     execute_action(chat_id, state, sub_action, buttons)
+
+                # ✅ Сохраняем изменения состояния после выполнения
                 send_buttons(chat_id, buttons)
+
+            # ✅ Выполняем переход только после выполнения вложенных действий
+            if target == "return":
+                if state["history"]:
+                    state["chapter"] = state["history"].pop()
+                    send_chapter(chat_id)
+                else:
+                    bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
+                return
 
             if target in chapters:
                 state["history"].append(state["chapter"])
@@ -222,66 +231,67 @@ def handle_choice(message):
                 send_chapter(chat_id)
                 return
 
+            return
     bot.send_message(chat_id, "⚠️ Некорректный выбор. Попробуйте снова.")
+
+
 # ✅ Сохранение текущего состояния игрока
 @bot.message_handler(func=lambda message: message.text == "📥 Сохранить игру")
 def save_game(message):
     chat_id = message.chat.id
-    state = load_state(chat_id)
+    state = get_state(chat_id)
 
-    # Генерация имени сохранения по текущей дате и времени
-    save_name = datetime.now().strftime("%Y-%m-%d %H:%M")
-    
-    # Ограничение количества сохранений по лимиту
-    if len(state["saves"]) >= SAVES_LIMIT:
-        state["saves"].popleft()  # Удаляем самое старое сохранение, чтобы освободить место
-    
-    state["saves"].append({"name": save_name, "chapter": state["chapter"]})
-    save_state(chat_id, state)
+    save_state(chat_id)  # ✅ Вызываем сохранение через state_manager
 
-    bot.send_message(chat_id, f"✅ *Игра сохранена:* `{save_name}`", parse_mode="Markdown")
+    # ✅ Получаем имя последнего сохранения
+    last_save = state["saves"][-1]["name"]
 
+    bot.send_message(chat_id, f"✅ *Игра сохранена:* `{last_save}`", parse_mode="Markdown")
+
+    # ✅ Отображаем кнопки после сохранения
     buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
     send_buttons(chat_id, buttons)
 
 
-# ✅ Загрузка сохранения
 @bot.message_handler(func=lambda message: message.text == "📤 Загрузить игру")
 def load_game(message):
     chat_id = message.chat.id
-    state = load_state(chat_id)
 
-    if not state["saves"]:
+    save_file = f"{SAVES_DIR}/{chat_id}.json"
+    if not os.path.exists(save_file):
         bot.send_message(chat_id, "⚠️ *Нет доступных сохранений!*", parse_mode="Markdown")
         return
+    
+    with open(save_file, "r", encoding="utf-8") as file:
+        existing_data = json.load(file)
 
-    # Формируем меню с доступными сохранениями
     markup = types.ReplyKeyboardMarkup(row_width=1, one_time_keyboard=True)
-    for i, save in enumerate(state["saves"]):
-        markup.add(types.KeyboardButton(f"Загрузить {i + 1} ({save['name']})"))
+    for i, save_name in enumerate(sorted(existing_data.keys(), reverse=True)):
+        markup.add(types.KeyboardButton(f"Загрузить {i + 1} ({save_name})"))
 
     bot.send_message(chat_id, "🔄 *Выберите сохранение:*", reply_markup=markup, parse_mode="Markdown")
 
 
-# ✅ Обработка выбора сохранения
 @bot.message_handler(func=lambda message: message.text.startswith("Загрузить "))
 def handle_load_choice(message):
     chat_id = message.chat.id
-    state = load_state(chat_id)
 
-    # Получаем список сохранений
-    saves_list = list(state["saves"])
     try:
         save_index = int(message.text.split()[1]) - 1
-        if 0 <= save_index < len(saves_list):
-            selected_save = saves_list[save_index]
 
-            state["chapter"] = selected_save["chapter"]
-            save_state(chat_id, state)
+        save_file = f"{SAVES_DIR}/{chat_id}.json"
+        with open(save_file, "r", encoding="utf-8") as file:
+            existing_data = json.load(file)
 
-            bot.send_message(chat_id, f"✅ *Сохранение загружено:* `{selected_save['name']}`", parse_mode="Markdown")
+            save_names = sorted(existing_data.keys(), reverse=True)
+            selected_save = save_names[save_index]
+
+            # ✅ Загружаем состояние через state_manager
+            load_specific_state(chat_id, selected_save)
+
+            bot.send_message(chat_id, f"✅ *Загружено сохранение:* `{selected_save}`", parse_mode="Markdown")
             send_chapter(chat_id)
-        else:
-            bot.send_message(chat_id, "⚠️ *Некорректный выбор сохранения.*", parse_mode="Markdown")
-    except (ValueError, IndexError):
+
+    except (ValueError, IndexError) as e:
+        print(f"⚠️ Ошибка при выборе сохранения: {e}")
         bot.send_message(chat_id, "⚠️ *Ошибка выбора сохранения.*", parse_mode="Markdown")

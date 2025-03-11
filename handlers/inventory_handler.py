@@ -1,5 +1,5 @@
 from config import bot, chapters  # Импортируем bot из config.py
-from utils.state_manager import state_cache
+from utils.state_manager import get_state, state_cache
 from handlers.game_handler import send_buttons, send_chapter
 import telebot.types as types
 
@@ -7,7 +7,7 @@ import telebot.types as types
 @bot.message_handler(func=lambda message: message.text == "🎒 Инвентарь")
 def show_inventory(message):
     chat_id = message.chat.id
-    state = state_cache[chat_id]  # ✅ Работа напрямую со стейтом в памяти
+    state = get_state(chat_id)  # ✅ Работа напрямую со стейтом в памяти
     
     # ✅ Передаем кнопки из состояния главы
     buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]

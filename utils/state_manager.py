@@ -2,73 +2,108 @@ import json
 import os
 from collections import deque
 from config import SAVES_DIR, first_chapter
+from datetime import datetime
 
-SAVES_LIMIT = 5  # Максимальное количество сохранений
-HISTORY_LIMIT = 10  # Лимит на историю
-
-# Глобальный кэш состояний в памяти
+# ✅ Кэш состояний в памяти
 state_cache = {}
 
-# ✅ Загрузка состояния игрока в память
-def load_state(user_id):
-    if user_id in state_cache:
-        # ✅ Если состояние уже в кэше — используем его
-        return state_cache[user_id]
+SAVES_LIMIT = 5
+HISTORY_LIMIT = 10
 
-    save_file = f"{SAVES_DIR}/{user_id}.json"
-    if os.path.exists(save_file):
-        with open(save_file, "r", encoding="utf-8") as file:
-            state = json.load(file)
-            state["history"] = deque(state.get("history", []), maxlen=HISTORY_LIMIT)
-            state["saves"] = deque(state.get("saves", []), maxlen=SAVES_LIMIT)
-            print(f"✅ State loaded from file for user {user_id}")
-    else:
-        # ✅ Создание нового состояния при отсутствии файла
-        state = {
+
+# ✅ Получаем состояние из кэша или создаём новое состояние
+def get_state(user_id):
+    if user_id not in state_cache:
+        print(f"⚠️ Состояние для пользователя {user_id} отсутствует — создаём новое состояние.")
+        state_cache[user_id] = {
             "chapter": first_chapter,
             "instruction": None,
             "inventory": [],
             "gold": 0,
             "characteristics": {},
             "saves": deque([], maxlen=SAVES_LIMIT),
-            "history": deque([], maxlen=HISTORY_LIMIT),
             "options": {},
-            "end_triggered": False,
+            "history": deque([], maxlen=HISTORY_LIMIT)
         }
-        print(f"✅ New state created for user {user_id}")
-
-    # ✅ Сохраняем состояние в кэш
-    state_cache[user_id] = state
-    return state
+    return state_cache[user_id]
 
 
-# ✅ Сохранение состояния игрока (только при необходимости)
+# ✅ Сохраняем текущее состояние в общий JSON-файл (по имени сохранения)
 def save_state(user_id):
-    if user_id not in state_cache:
-        print(f"⚠️ State for user {user_id} not found in cache.")
-        return
-    
     save_file = f"{SAVES_DIR}/{user_id}.json"
-    state = state_cache[user_id]
 
-    # ✅ Преобразуем deque в список для сохранения в JSON
-    state_copy = state.copy()
-    state_copy["history"] = list(state["history"])
-    state_copy["saves"] = list(state["saves"])
+    # ✅ Загружаем существующие сохранения из файла (если есть)
+    if os.path.exists(save_file):
+        with open(save_file, "r", encoding="utf-8") as file:
+            existing_data = json.load(file)
+    else:
+        existing_data = {}
 
+    # ✅ Подготавливаем текущее состояние для сохранения
+    state = state_cache[user_id].copy()
+    state["history"] = list(state["history"])
+    state["saves"] = list(state["saves"])
+
+    # ✅ Создаём уникальное имя сохранения (дата + глава)
+    save_name = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    existing_data[save_name] = state
+
+    # ✅ Ограничиваем количество сохранений в файле
+    if len(existing_data) > SAVES_LIMIT:
+        oldest_key = sorted(existing_data.keys())[0]
+        del existing_data[oldest_key]
+
+    # ✅ Сохраняем все данные обратно в JSON-файл
     with open(save_file, "w", encoding="utf-8") as file:
-        json.dump(state_copy, file, ensure_ascii=False, indent=4)
-        print(f"✅ State saved to file for user {user_id}")
+        json.dump(existing_data, file, ensure_ascii=False, indent=4)
+
+    print(f"✅ Состояние сохранено под именем {save_name}")
+
+    # ✅ Добавляем сохранение в кэш (для быстрого отображения в игре)
+    state_cache[user_id]["saves"].append({"name": save_name, "chapter": state["chapter"]})
 
 
-# ✅ Очистка состояния игрока из кэша
-def clear_state(user_id):
-    if user_id in state_cache:
-        del state_cache[user_id]
-        print(f"✅ State cleared from memory for user {user_id}")
+# ✅ Загружаем последнее сохранение из JSON-файла в кэш
+def load_state(user_id):
+    save_file = f"{SAVES_DIR}/{user_id}.json"
+
+    if os.path.exists(save_file):
+        with open(save_file, "r", encoding="utf-8") as file:
+            existing_data = json.load(file)
+
+            # ✅ Загружаем самое последнее сохранение по времени
+            last_key = sorted(existing_data.keys())[-1]
+            state = existing_data[last_key]
+
+            # ✅ Конвертируем в deque для оперативной работы
+            state["history"] = deque(state.get("history", []), maxlen=HISTORY_LIMIT)
+            state["saves"] = deque(state.get("saves", []), maxlen=SAVES_LIMIT)
+
+            # ✅ Загружаем в кэш
+            state_cache[user_id] = state
+            print(f"✅ Загружено сохранение: {last_key}")
+            return state
+
+    # ✅ Если данных в файле нет — создаём новое состояние
+    return get_state(user_id)
 
 
-# ✅ Пример использования:
-# state = load_state(user_id)
-# state["gold"] += 10  # Работа напрямую с состоянием в памяти
-# save_state(user_id)   # Явное сохранение в файл (по необходимости)
+# ✅ Загрузка конкретного сохранения по имени
+def load_specific_state(user_id, save_name):
+    save_file = f"{SAVES_DIR}/{user_id}.json"
+
+    if os.path.exists(save_file):
+        with open(save_file, "r", encoding="utf-8") as file:
+            existing_data = json.load(file)
+
+            if save_name in existing_data:
+                state = existing_data[save_name]
+                state["history"] = deque(state.get("history", []), maxlen=HISTORY_LIMIT)
+                state["saves"] = deque(state.get("saves", []), maxlen=SAVES_LIMIT)
+
+                # ✅ Загружаем в кэш
+                state_cache[user_id] = state
+                print(f"✅ Загружено сохранение: {save_name}")
+                return state
+
+    return None

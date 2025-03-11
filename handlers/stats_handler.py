@@ -29,12 +29,12 @@ def show_characteristics(message):
         return
 
     # ✅ Формируем сообщение с характеристиками
-    message_text = "📊 *Ваши характеристики:*\n"
+    message_text = "📊 Ваши характеристики:\n"
     for key, char in characteristics.items():
         # ✅ Если нет имени характеристики, выводим ключ как fallback
         name = char.get('name') if char.get('name') else key
         value = char.get('value', 0)
-        message_text += f"🔹 *{name}*: {value}\n"
+        message_text += f"🔹 {name}: {value}\n"
 
     bot.send_message(chat_id, message_text, parse_mode="Markdown")
 
