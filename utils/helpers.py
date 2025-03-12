@@ -120,13 +120,13 @@ def evaluate_condition(state, condition):
     # ✅ Заменяем переменные через регулярное выражение
     condition = re.sub(r'\b([A-Za-z0-9_]+)\b', replace_variables_safe, condition)
 
+    result = False  # ✅ Инициализация по умолчанию
     try:
-        # ✅ Ограничиваем eval только значениями из характеристик (для безопасности)
         local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
         result = eval(condition, {}, local_vars)
-        print(f"✅ Условие: {condition} → {result}")
-        return bool(result)
-    except (SyntaxError, ValueError, NameError) as e:
+        print(f"✅ evaluate_condition: {condition} → {result}")
+        return result
+    except Exception as e:
         print(f"⚠️ Ошибка в evaluate_condition: {e}")
         return False
 

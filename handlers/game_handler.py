@@ -261,7 +261,7 @@ def send_buttons(chat_id):
 def execute_action(chat_id, state, action):
     action_type = action["type"]
     value = action["value"]
-
+    print(f"🚀 Вызов действия: {action_type} -> {value}")
     if action_type == "text":
         handle_text(chat_id, value)
     elif action_type == "btn" or action_type == "xbtn":
