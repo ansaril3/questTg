@@ -44,7 +44,6 @@ def send_chapter(chat_id):
         return
 
     state["options"] = {}
-    buttons = []
 
     for action in chapter:
         print(f"------ACTION: {str(action)[:60]}{'...' if len(str(action)) > 60 else ''}")
@@ -65,16 +64,6 @@ def handle_text(chat_id, value):
     new_value = replace_variables_in_text(state, value)
     bot.send_message(chat_id, new_value)
 
-def handle_btn(state, value, buttons):
-    buttons.append(types.KeyboardButton(value["text"]))
-    state["options"][value["text"]] = value["target"]
-
-def handle_xbtn(chat_id, state, value, buttons):
-    buttons.append(types.KeyboardButton(value["text"]))
-    state["options"][value["text"]] = value["target"]
-
-    if "actions" in value:
-        state["options"][f"{value['text']}_actions"] = value["actions"]
 
 def handle_inventory(state, value):
     process_inventory_action(state, value)
@@ -125,7 +114,7 @@ def handle_image(chat_id, value):
     else:
         bot.send_message(chat_id, f"⚠️ Изображение не найдено: {value}")
 
-def handle_if(chat_id, state, value, buttons):
+def handle_if(chat_id, state, value):
     condition = value["condition"]
     actions = value["actions"]
     else_actions = value.get("else_actions", [])
@@ -133,11 +122,11 @@ def handle_if(chat_id, state, value, buttons):
     if evaluate_condition(state, condition):
         print(f"✅ Условие ИСТИННО: {condition}")
         for sub_action in actions:
-            execute_action(chat_id, state, sub_action, buttons)
+            execute_action(chat_id, state, sub_action)
     else:
         print(f"❌ Условие ЛОЖНО: {condition}")
         for sub_action in else_actions:
-            execute_action(chat_id, state, sub_action, buttons)
+            execute_action(chat_id, state, sub_action,)
 
 @bot.message_handler(func=lambda message: message.text in get_all_options(message.chat.id))
 def handle_choice(message):
@@ -291,7 +280,7 @@ def execute_action(chat_id, state, action):
     elif action_type == "image":
         handle_image(chat_id, value)
     elif action_type == "if":
-        handle_if(chat_id, state, value, [])
+        handle_if(chat_id, state, value)
     elif action_type == "end":
         state["end_triggered"] = True
 
