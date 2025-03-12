@@ -13,9 +13,13 @@
             }
         },
         {
+            "type": "gold",
+            "value": "100"
+        },
+        {
             "type": "if",
             "value": {
-                "condition": "strength > 5 and gold > 50",
+                "condition": "strength > 5 and strength < 50",
                 "actions": [
                     {
                         "type": "text",
@@ -56,13 +60,17 @@
         },
         {
             "type": "goto",
-            "value": "test_end"
+            "value": "test_secret"
         }
     ],
     "test_secret": [
         {
             "type": "text",
             "value": "Вы выбрали тайный путь"
+        },
+        {
+            "type": "gold",
+            "value": "+20"
         }
     ],
     "test_end": [
@@ -73,6 +81,10 @@
         {
             "type": "end",
             "value": ""
+        },
+        {
+            "type": "text",
+            "value": "Текст не должен отобразиться"
         }
     ]
 }

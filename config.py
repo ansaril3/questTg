@@ -15,6 +15,7 @@ bot = TeleBot(TOKEN)
 CHAPTERS_FILE = "data/chapters.json"
 INSTRUCTIONS_FILE = "data/instructions.json"
 SAVES_DIR = "saves"
+TEST_CHAPTERS_FILE = "data/test_chapters.json"
 
 # Создание папки сохранений, если её нет
 if not os.path.exists(SAVES_DIR):

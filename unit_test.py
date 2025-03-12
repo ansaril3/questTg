@@ -18,11 +18,17 @@ class TestBotActions(unittest.TestCase):
         """Создание тестового состояния"""
         self.chat_id = 123456789
         self.state = get_state(self.chat_id)
-        self.state["chapter"] = "test_start"
-        self.state["history"] = []
-        self.state["options"] = {}
-        self.state["characteristics"] = {"strength": {"value": 10}, "gold": {"value": 100}}
-        save_state(self.chat_id)
+        
+        if not self.state:
+            self.state = {
+                "chapter": "test_start",
+                "history": [],
+                "options": {},
+                "characteristics": {"strength": {"value": 10}, "gold": {"value": 100}},
+                "end_triggered": False
+            }
+            save_state(self.chat_id)
+
 
     def test_assign(self):
         """Тест действия assign"""
@@ -85,7 +91,7 @@ class TestBotActions(unittest.TestCase):
 
     def test_image(self):
         """Тест действия image (файл должен существовать)"""
-        action = {"type": "image", "value": "/Images/1.JPG"}
+        action = {"type": "image", "value": "/data/Images/1.JPG"}
         with patch("telebot.TeleBot.send_photo") as mock_send:
             execute_action(self.chat_id, self.state, action)
             mock_send.assert_called()

@@ -14,7 +14,7 @@ HISTORY_LIMIT = 10
 # ✅ Получаем состояние из кэша или создаём новое состояние
 def get_state(user_id):
     if user_id not in state_cache:
-        print(f"⚠️ Состояние для пользователя {user_id} отсутствует — создаём новое состояние.")
+        # print(f"⚠️ Состояние для пользователя {user_id} отсутствует — создаём новое состояние.")
         state_cache[user_id] = {
             "chapter": first_chapter,
             "instruction": None,
