@@ -189,20 +189,28 @@ def get_all_options(chat_id):
     if not state:
         return set()
 
-    # ✅ Добавляем кнопки из главы + временные кнопки из state['options']
     options = set(state.get("options", {}).keys())
 
+    # ✅ Добавляем кнопки из главы
     chapter_key = state["chapter"]
     chapter = chapters.get(chapter_key, [])
 
-    # ✅ Добавляем кнопки из главы
     options.update(
         action["value"]["text"]
         for action in chapter
         if action["type"] in ("btn", "xbtn")
     )
 
-    print(f"📌 Все доступные варианты: {options}")
+    # ✅ Добавляем общие кнопки
+    options.update([
+        "📥 Сохранить игру",
+        "📤 Загрузить игру",
+        "📖 Инструкция",
+        "🎒 Инвентарь",
+        "📊 Характеристики"
+    ])
+
+    print(f"📌 Все доступные кнопки: {options}")
     return options
 
 
