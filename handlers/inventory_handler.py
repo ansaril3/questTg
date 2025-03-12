@@ -1,6 +1,6 @@
 from config import bot, chapters  # Импортируем bot из config.py
 from utils.state_manager import get_state, state_cache
-from handlers.game_handler import send_buttons, send_chapter, show_menu
+from handlers.game_handler import send_buttons, send_chapter, send_buttons
 import telebot.types as types
 
 # ✅ Обработка инвентаря
@@ -17,7 +17,7 @@ def show_inventory(message):
 
     if not inventory_list and gold == 0:
         bot.send_message(chat_id, "🎒 Инвентарь пуст.")
-        show_menu(chat_id)
+        send_buttons(chat_id)
         return
     
     message_text = "🎒 *Ваш инвентарь:*\n"

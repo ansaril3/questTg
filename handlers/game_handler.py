@@ -243,41 +243,17 @@ def send_buttons(chat_id):
     # ✅ Добавляем динамические кнопки (если есть)
     dynamic_buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
     for i in range(0, len(dynamic_buttons), 2):
-        markup.add(*dynamic_buttons[i:i + 2])  # Добавляет пары или одиночную кнопку
-    
-    # ✅ Добавляем общие кнопки в state["options"] для обработки
-    for button in COMMON_BUTTONS:
-        state["options"][button] = button
-    
-    # ✅ Добавляем общие кнопки с новой строки (парами)
+        markup.add(*dynamic_buttons[i:i + 2])  
+
+    # ✅ Добавляем общие кнопки в интерфейс, НО НЕ В СОСТОЯНИЕ!
     common_buttons = [types.KeyboardButton(text) for text in COMMON_BUTTONS]
     for i in range(0, len(common_buttons), 2):
-        markup.add(*common_buttons[i:i + 2])  # Добавляет пары или одиночную кнопку
-    
-    # ✅ Логируем финальный список кнопок
+        markup.add(*common_buttons[i:i + 2])
+
+    # ✅ Логируем финальный список кнопок (в state только игровые кнопки)
     print(f"📌 Отправляю кнопки: {list(state['options'].keys())}")
-    bot.send_message(chat_id, ".", reply_markup=markup)
 
-def show_menu(chat_id):
-    state = state_cache.get(chat_id)
-    if not state:
-        return
-    
-    # ✅ Создаём разметку
-    markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
-
-    # ✅ Добавляем только динамические кнопки из state["options"]
-    dynamic_buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
-    for i in range(0, len(dynamic_buttons), 2):
-        markup.add(*dynamic_buttons[i:i + 2])  # Добавляет пары или одиночную кнопку
-    
-    # ✅ Добавляем общие кнопки, но НЕ ДОБАВЛЯЕМ в state["options"]
-    common_buttons = [types.KeyboardButton(text) for text in COMMON_BUTTONS]
-    for i in range(0, len(common_buttons), 2):
-        markup.add(*common_buttons[i:i + 2])  # Добавляет пары или одиночную кнопку
-    
-    # ✅ Логируем финальный список кнопок
-    print(f"📌 Отображаем кнопки без сохранения в state: {list(state['options'].keys()) + COMMON_BUTTONS}")
+    # ✅ Отправляем новую клавиатуру
     bot.send_message(chat_id, ".", reply_markup=markup)
 
 

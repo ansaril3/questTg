@@ -24,8 +24,8 @@ def show_characteristics(message):
 
     if not characteristics:
         bot.send_message(chat_id, "⚠️ У вас пока нет характеристик.")
-        from handlers.game_handler import show_menu
-        show_menu(chat_id)  # ✅ Показываем меню без сохранения кнопок в state
+        from handlers.game_handler import send_buttons
+        send_buttons(chat_id)  # ✅ Показываем меню без сохранения кнопок в state
         return
 
     # ✅ Формируем сообщение с характеристиками
@@ -38,5 +38,5 @@ def show_characteristics(message):
 
     bot.send_message(chat_id, message_text, parse_mode="Markdown")
 
-    from handlers.game_handler import show_menu
-    show_menu(chat_id)  # ✅ Показываем меню без дублирования кнопок
+    from handlers.game_handler import send_buttons
+    send_buttons(chat_id)  # ✅ Показываем меню без дублирования кнопок
