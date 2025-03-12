@@ -79,6 +79,10 @@
             "value": "Конец игры"
         },
         {
+            "type": "image",
+            "value": "/data/Images/3.JPG"
+        },
+        {
             "type": "end",
             "value": ""
         },
