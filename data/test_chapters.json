@@ -75,20 +75,24 @@
     ],
     "test_end": [
         {
-            "type": "text",
-            "value": "Конец игры"
-        },
-        {
-            "type": "image",
-            "value": "/data/Images/3.JPG"
+            "type": "assign",
+            "value": {
+                "key": "speed",
+                "value": "10",
+                "name": "Сила"
+            }
         },
         {
             "type": "end",
             "value": ""
         },
         {
-            "type": "text",
-            "value": "Текст не должен отобразиться"
+            "type": "assign",
+            "value": {
+                "key": "speed",
+                "value": "20",
+                "name": "Сила"
+            }
         }
     ]
 }

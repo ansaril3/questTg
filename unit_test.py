@@ -127,5 +127,26 @@ class TestBotActions(unittest.TestCase):
             execute_action(self.chat_id, self.state, action)
             self.assertEqual(self.state["chapter"], "test_secret")
 
+    def test_end(self):
+        """Тест выполнения end"""
+        print("➡️ Запуск test_end")
+
+        # ✅ Патчим глобальную переменную chapters на тестовые данные
+        with patch("handlers.game_handler.chapters", test_chapters):
+            with patch("handlers.game_handler.bot.send_message") as mock_send:
+                with patch("handlers.game_handler.bot.send_photo") as mock_send_photo:
+                    # ✅ Устанавливаем главу и вызываем send_chapter()
+                    self.state["chapter"] = "test_end"
+                    send_chapter(self.chat_id)  
+
+                    # ✅ Проверяем, что первое действие (assign) сработало
+                    self.assertEqual(self.state["characteristics"]["speed"]["value"], 10)
+
+                    # ✅ Проверяем финальное значение speed (не должно измениться)
+                    self.assertEqual(self.state["characteristics"]["speed"]["value"], 10)
+
+        print("✅ Тест успешно пройден!")
+
+
 if __name__ == "__main__":
     unittest.main()
