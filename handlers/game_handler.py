@@ -11,7 +11,13 @@ import json
 
 DATA_DIR = "data"
 HISTORY_LIMIT = 10
-
+COMMON_BUTTONS = [
+    "📥 Сохранить игру",
+    "📤 Загрузить игру",
+    "📊 Характеристики",
+    "🎒 Инвентарь",
+    "📖 Инструкция"
+]
 
 # ✅ Начало игры
 @bot.message_handler(commands=['start'])
@@ -43,64 +49,15 @@ def send_chapter(chat_id):
     for action in chapter:
         print(f"------ACTION: {str(action)[:60]}{'...' if len(str(action)) > 60 else ''}")
         
-        execute_action(chat_id, state, action, buttons)
+        execute_action(chat_id, state, action)
 
         # ✅ Остановка выполнения, если сработал end
         if state.get("end_triggered"):
             state["end_triggered"] = False
             break
 
-    send_buttons(chat_id, buttons)
-
-
-# ✅ Общая функция отправки кнопок
-def send_buttons(chat_id, buttons):
-    if not buttons:
-        return
-
-    markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
-    markup.add(*buttons)
-
-    markup.add(
-        types.KeyboardButton("📥 Сохранить игру"),
-        types.KeyboardButton("📤 Загрузить игру"),
-        types.KeyboardButton("📖 Инструкция"),
-        types.KeyboardButton("🎒 Инвентарь"),
-        types.KeyboardButton("📊 Характеристики"),
-    )
-
-    print(f"📌 Отправляю кнопки: {[btn.text for btn in buttons]}")
-    bot.send_message(chat_id, ".", reply_markup=markup)
-
-
-# ✅ Общая обработка действия
-def execute_action(chat_id, state, action, buttons):
-    action_type = action["type"]
-    value = action["value"]
-
-    if action_type == "text":
-        handle_text(chat_id, value)
-    elif action_type == "btn":
-        handle_btn(state, value, buttons)
-    elif action_type == "xbtn":
-        handle_xbtn(chat_id, state, value, buttons)
-    elif action_type == "inventory":
-        handle_inventory(state, value)
-    elif action_type == "gold":
-        handle_gold(state, value)
-    elif action_type == "assign":
-        handle_assign(state, value)
-    elif action_type == "goto":
-        handle_goto(chat_id, state, value)
-    elif action_type == "image":
-        handle_image(chat_id, value)
-    elif action_type == "if":
-        handle_if(chat_id, state, value, buttons)
-    elif action_type == "end":
-        state["end_triggered"] = True
-        return
-
-            
+    send_buttons(chat_id)
+         
 
 # ✅ Обработчики действий
 def handle_text(chat_id, value):
@@ -182,103 +139,34 @@ def handle_if(chat_id, state, value, buttons):
         for sub_action in else_actions:
             execute_action(chat_id, state, sub_action, buttons)
 
-
-# ✅ Получаем все доступные варианты кнопок (исправлено)
-def get_all_options(chat_id):
-    state = state_cache.get(chat_id)
-    if not state:
-        return set()
-
-    options = set(state.get("options", {}).keys())
-
-    # ✅ Добавляем кнопки из главы
-    chapter_key = state["chapter"]
-    chapter = chapters.get(chapter_key, [])
-
-    options.update(
-        action["value"]["text"]
-        for action in chapter
-        if action["type"] in ("btn", "xbtn")
-    )
-
-    # ✅ Добавляем общие кнопки
-    options.update([
-        "📥 Сохранить игру",
-        "📤 Загрузить игру",
-        "📖 Инструкция",
-        "🎒 Инвентарь",
-        "📊 Характеристики"
-    ])
-
-    print(f"📌 Все доступные кнопки: {options}")
-    return options
-
-
-# ✅ Обработка выбора игрока (исправлено)
 @bot.message_handler(func=lambda message: message.text in get_all_options(message.chat.id))
 def handle_choice(message):
     chat_id = message.chat.id
     state = get_state(chat_id)
 
-    chapter_key = state["chapter"]
-    chapter = chapters.get(chapter_key)
+    print(f"🔘 Нажата кнопка: {message.text}")
 
-    if not chapter:
-        bot.send_message(chat_id, "⚠️ Ошибка: глава не найдена.")
+    target = state["options"].get(message.text)
+    actions = state["options"].get(f"{message.text}_actions")
+
+    if actions:
+        print(f"✅ Выполняю вложенные действия для {message.text}: {actions}")
+        for sub_action in actions:
+            execute_action(chat_id, state, sub_action)
+
+    if target == "return":
+        if state["history"]:
+            state["chapter"] = state["history"].pop()
+            send_chapter(chat_id)
+        else:
+            bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
         return
 
-    for action in chapter:
-        if action["type"] in ["btn", "xbtn"] and action["value"]["text"] == message.text:
-            target = action["value"]["target"]
-
-            # ✅ Выполняем вложенные действия перед переходом
-            actions = state["options"].get(f"{message.text}_actions")
-            if actions:
-                print(f"✅ Выполняю вложенные действия для {message.text}: {actions}")
-
-                buttons = []
-                for sub_action in actions:
-                    execute_action(chat_id, state, sub_action, buttons)
-
-                # ✅ Сохраняем изменения состояния после выполнения
-                send_buttons(chat_id, buttons)
-
-            # ✅ Выполняем переход только после выполнения вложенных действий
-            if target == "return":
-                if state["history"]:
-                    state["chapter"] = state["history"].pop()
-                    send_chapter(chat_id)
-                else:
-                    bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
-                return
-
-            if target in chapters:
-                state["history"].append(state["chapter"])
-                state["chapter"] = target
-                send_chapter(chat_id)
-                return
-
-    # ✅ Проверяем кнопки из state["options"]
-    if message.text in state["options"]:
-        target = state["options"][message.text]
-        actions = state["options"].get(f"{message.text}_actions")
-
-        # ✅ Выполняем вложенные действия, если есть
-        if actions:
-            print(f"✅ Выполняю вложенные действия для {message.text}: {actions}")
-
-            buttons = []
-            for sub_action in actions:
-                execute_action(chat_id, state, sub_action, buttons)
-
-            send_buttons(chat_id, buttons)
-
-        # ✅ Выполняем переход к следующей главе
-        if target in chapters:
-            state["history"].append(state["chapter"])
-            state["chapter"] = target
-            send_chapter(chat_id)
-            return
+    if target in chapters:
+        state["history"].append(state["chapter"])
+        state["chapter"] = target
+        send_chapter(chat_id)
+        return
 
     bot.send_message(chat_id, "⚠️ Некорректный выбор. Попробуйте снова.")
 
@@ -347,3 +235,76 @@ def handle_load_choice(message):
     except (ValueError, IndexError) as e:
         print(f"⚠️ Ошибка при выборе сохранения: {e}")
         bot.send_message(chat_id, "⚠️ *Ошибка выбора сохранения.*", parse_mode="Markdown")
+
+# ✅ Отправка кнопок напрямую из options
+def send_buttons(chat_id):
+    state = state_cache.get(chat_id)
+    if not state:
+        return
+    
+    options = state.get("options", {})
+    if not options:
+        return
+
+    markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
+    
+    # ✅ Добавляем динамические кнопки парами
+    buttons = [types.KeyboardButton(text) for text in options.keys()]
+    for i in range(0, len(buttons), 2):
+        if i + 1 < len(buttons):
+            markup.add(buttons[i], buttons[i + 1])
+        else:
+            markup.add(buttons[i])
+
+    # ✅ Добавляем общие кнопки парами
+    common_buttons = [types.KeyboardButton(text) for text in COMMON_BUTTONS]
+    for i in range(0, len(common_buttons), 2):
+        if i + 1 < len(common_buttons):
+            markup.add(common_buttons[i], common_buttons[i + 1])
+        else:
+            markup.add(common_buttons[i])
+
+    print(f"📌 Отправляю кнопки: {list(options.keys()) + COMMON_BUTTONS}")
+    bot.send_message(chat_id, ".", reply_markup=markup)
+
+
+# ✅ Упрощаем обработку действий
+def execute_action(chat_id, state, action):
+    action_type = action["type"]
+    value = action["value"]
+
+    if action_type == "text":
+        handle_text(chat_id, value)
+    elif action_type == "btn" or action_type == "xbtn":
+        state["options"][value["text"]] = value["target"]
+        if "actions" in value:
+            state["options"][f"{value['text']}_actions"] = value["actions"]
+        print(f"✅ Добавлена кнопка: {value['text']} -> {value['target']}")
+    elif action_type == "inventory":
+        handle_inventory(state, value)
+    elif action_type == "gold":
+        handle_gold(state, value)
+    elif action_type == "assign":
+        handle_assign(state, value)
+    elif action_type == "goto":
+        handle_goto(chat_id, state, value)
+    elif action_type == "image":
+        handle_image(chat_id, value)
+    elif action_type == "if":
+        handle_if(chat_id, state, value, [])
+    elif action_type == "end":
+        state["end_triggered"] = True
+
+# ✅ Упрощаем получение всех вариантов кнопок
+def get_all_options(chat_id):
+    state = state_cache.get(chat_id)
+    if not state:
+        return set()
+
+    options = set(state.get("options", {}).keys())
+
+    # ✅ Добавляем общие кнопки из общей переменной
+    options.update(COMMON_BUTTONS)
+
+    return options
+
