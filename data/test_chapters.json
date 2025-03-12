@@ -73,6 +73,12 @@
             "value": "+20"
         }
     ],
+    "test_return": [
+        {
+            "type": "goto",
+            "value": "return"
+        }
+    ],
     "test_end": [
         {
             "type": "assign",

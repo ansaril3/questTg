@@ -106,10 +106,13 @@ class TestBotActions(unittest.TestCase):
             action = test_chapters["test_start"][5]
             execute_action(self.chat_id, self.state, action)
 
+            # ✅ Проверяем, что кнопка добавлена в опции
             self.assertEqual(self.state["options"]["🔥 Тайный путь"], "test_secret")
             
-             # ✅ Проверяем, что характеристика secret еще НЕ инициализирована
+            # ✅ Проверяем, что характеристика secret еще НЕ инициализирована
             self.assertNotIn("secret", self.state["characteristics"])
+
+            # ✅ Эмулируем нажатие кнопки
             message = type(
                 "Message", 
                 (), 
@@ -119,6 +122,12 @@ class TestBotActions(unittest.TestCase):
 
             # ✅ Проверяем выполнение вложенного действия (assign)
             self.assertEqual(self.state["characteristics"]["secret"]["value"], 1)
+
+            # ✅ Проверяем, что глава сменилась на "test_secret"
+            self.assertEqual(self.state["chapter"], "test_secret")
+
+        print("✅ Тест успешно пройден!")
+
 
     def test_goto(self):
         """Тест действия goto"""
@@ -146,6 +155,27 @@ class TestBotActions(unittest.TestCase):
 
                     # ✅ Проверяем финальное значение speed (не должно измениться)
                     self.assertEqual(self.state["characteristics"]["speed"]["value"], 10)
+
+        print("✅ Тест успешно пройден!")
+
+    def test_return(self):
+        """Тест возврата в предыдущую главу"""
+        print("➡️ Запуск test_return")
+
+        with patch("handlers.game_handler.chapters", test_chapters):
+            # ✅ Устанавливаем главу в "test_secret"
+            self.state["chapter"] = "test_secret"
+            send_chapter(self.chat_id)
+
+            # ✅ Сохраняем состояние истории
+            self.state["history"].append("test_secret")
+
+            # ✅ Переходим в "test_return"
+            self.state["chapter"] = "test_return"
+            send_chapter(self.chat_id)
+
+            # ✅ Условие успеха: мы находимся на "test_secret"
+            self.assertEqual(self.state["chapter"], "test_secret")
 
         print("✅ Тест успешно пройден!")
 
