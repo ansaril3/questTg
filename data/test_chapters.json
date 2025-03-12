@@ -106,5 +106,21 @@
             "type": "image",
             "value": "/Images/3.JPG"
         }
+    ],
+    "inv_check": [
+        {
+            "type": "inventory",
+            "value": "inv+фиал волшебного питья[usable]"
+        }
+    ],
+    "use_фиал волшебного питья": [
+        {
+            "type": "assign",
+            "value": {
+                "key": "speed",
+                "value": "30",
+                "name": "Скорость"
+            }
+        }
     ]
 }
