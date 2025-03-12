@@ -1,7 +1,9 @@
 from config import bot, chapters
 from utils.state_manager import state_cache
-from handlers.game_handler import send_buttons
+import telebot.types as types
 
+from config import bot, chapters
+from utils.state_manager import state_cache
 import telebot.types as types
 
 @bot.message_handler(func=lambda message: message.text == "📊 Характеристики")
@@ -22,10 +24,8 @@ def show_characteristics(message):
 
     if not characteristics:
         bot.send_message(chat_id, "⚠️ У вас пока нет характеристик.")
-
-        # ✅ Получаем кнопки из текущего состояния, если они есть
-        buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
-        send_buttons(chat_id, buttons)
+        from handlers.game_handler import show_menu
+        show_menu(chat_id)  # ✅ Показываем меню без сохранения кнопок в state
         return
 
     # ✅ Формируем сообщение с характеристиками
@@ -38,6 +38,5 @@ def show_characteristics(message):
 
     bot.send_message(chat_id, message_text, parse_mode="Markdown")
 
-    # ✅ Передаем кнопки из состояния главы
-    buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
-    send_buttons(chat_id, buttons)
+    from handlers.game_handler import show_menu
+    show_menu(chat_id)  # ✅ Показываем меню без дублирования кнопок

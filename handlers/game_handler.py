@@ -1,23 +1,12 @@
-from config import bot, chapters  
-from utils.state_manager import load_specific_state, save_state, get_state, state_cache, SAVES_LIMIT, SAVES_DIR
-from utils.helpers import check_conditions, calculate_characteristic, process_inventory_action, replace_variables_in_text, evaluate_condition
+from config import bot, chapters, COMMON_BUTTONS, DATA_DIR, SAVES_DIR
+from utils.state_manager import load_specific_state, save_state, get_state, state_cache  
+from utils.helpers import process_inventory_action, replace_variables_in_text, evaluate_condition
 import telebot.types as types
 from collections import deque
 from datetime import datetime
-import os
-import random
-import re
-import json
+import os, random, re, json
+from handlers.stats_handler import show_characteristics
 
-DATA_DIR = "data"
-HISTORY_LIMIT = 10
-COMMON_BUTTONS = [
-    "📥 Сохранить игру",
-    "📤 Загрузить игру",
-    "📊 Характеристики",
-    "🎒 Инвентарь",
-    "📖 Инструкция"
-]
 
 # ✅ Начало игры
 @bot.message_handler(commands=['start'])
@@ -143,6 +132,24 @@ def handle_choice(message):
         for sub_action in actions:
             execute_action(chat_id, state, sub_action)
 
+    # ✅ Обрабатываем кнопки из COMMON_BUTTONS
+    if message.text == "📊 Характеристики":
+        show_characteristics(message)
+        return
+
+    if message.text == "🎒 Инвентарь":
+        from handlers.inventory_handler import show_inventory
+        show_inventory(message)
+        return
+
+    if message.text == "📥 Сохранить игру":
+        save_game(message)
+        return
+    
+    if message.text == "📤 Загрузить игру":
+        load_game(message)
+        return
+
     if target == "return":
         if state["history"]:
             state["chapter"] = state["history"].pop()
@@ -180,7 +187,7 @@ def save_game(message):
     bot.send_message(chat_id, f"✅ *Игра сохранена:* `{last_save}`", parse_mode="Markdown")
 
     buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
-    send_buttons(chat_id, buttons)
+    send_buttons(chat_id)
 
 @bot.message_handler(func=lambda message: message.text == "📤 Загрузить игру")
 def load_game(message):
@@ -230,29 +237,47 @@ def send_buttons(chat_id):
     if not state:
         return
     
-    options = state.get("options", {})
-    if not options:
-        return
-
+    # ✅ Создаём разметку
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
-    
-    # ✅ Добавляем динамические кнопки парами
-    buttons = [types.KeyboardButton(text) for text in options.keys()]
-    for i in range(0, len(buttons), 2):
-        if i + 1 < len(buttons):
-            markup.add(buttons[i], buttons[i + 1])
-        else:
-            markup.add(buttons[i])
 
-    # ✅ Добавляем общие кнопки парами
+    # ✅ Добавляем динамические кнопки (если есть)
+    dynamic_buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
+    for i in range(0, len(dynamic_buttons), 2):
+        markup.add(*dynamic_buttons[i:i + 2])  # Добавляет пары или одиночную кнопку
+    
+    # ✅ Добавляем общие кнопки в state["options"] для обработки
+    for button in COMMON_BUTTONS:
+        state["options"][button] = button
+    
+    # ✅ Добавляем общие кнопки с новой строки (парами)
     common_buttons = [types.KeyboardButton(text) for text in COMMON_BUTTONS]
     for i in range(0, len(common_buttons), 2):
-        if i + 1 < len(common_buttons):
-            markup.add(common_buttons[i], common_buttons[i + 1])
-        else:
-            markup.add(common_buttons[i])
+        markup.add(*common_buttons[i:i + 2])  # Добавляет пары или одиночную кнопку
+    
+    # ✅ Логируем финальный список кнопок
+    print(f"📌 Отправляю кнопки: {list(state['options'].keys())}")
+    bot.send_message(chat_id, ".", reply_markup=markup)
 
-    print(f"📌 Отправляю кнопки: {list(options.keys()) + COMMON_BUTTONS}")
+def show_menu(chat_id):
+    state = state_cache.get(chat_id)
+    if not state:
+        return
+    
+    # ✅ Создаём разметку
+    markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
+
+    # ✅ Добавляем только динамические кнопки из state["options"]
+    dynamic_buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
+    for i in range(0, len(dynamic_buttons), 2):
+        markup.add(*dynamic_buttons[i:i + 2])  # Добавляет пары или одиночную кнопку
+    
+    # ✅ Добавляем общие кнопки, но НЕ ДОБАВЛЯЕМ в state["options"]
+    common_buttons = [types.KeyboardButton(text) for text in COMMON_BUTTONS]
+    for i in range(0, len(common_buttons), 2):
+        markup.add(*common_buttons[i:i + 2])  # Добавляет пары или одиночную кнопку
+    
+    # ✅ Логируем финальный список кнопок
+    print(f"📌 Отображаем кнопки без сохранения в state: {list(state['options'].keys()) + COMMON_BUTTONS}")
     bot.send_message(chat_id, ".", reply_markup=markup)
 
 

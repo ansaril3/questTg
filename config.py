@@ -19,7 +19,17 @@ TEST_MODE = 0
 CHAPTERS_FILE = "data/chapters.json" if TEST_MODE == 0 else "data/test_chapters.json"
 INSTRUCTIONS_FILE = "data/instructions.json"
 SAVES_DIR = "saves"
-
+DATA_DIR = "data"
+HISTORY_LIMIT = 10
+SAVES_LIMIT = 5
+COMMON_BUTTONS = [
+    "📥 Сохранить игру",
+    "📤 Загрузить игру",
+    "📊 Характеристики",
+    "🎒 Инвентарь",
+    "📖 Инструкция"
+]
+HISTORY_LIMIT = 10
 
 # Создание папки сохранений, если её нет
 if not os.path.exists(SAVES_DIR):

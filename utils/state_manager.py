@@ -1,14 +1,12 @@
 import json
 import os
 from collections import deque
-from config import SAVES_DIR, first_chapter
+from config import SAVES_DIR, SAVES_LIMIT, HISTORY_LIMIT, first_chapter
 from datetime import datetime
 
 # ✅ Кэш состояний в памяти
 state_cache = {}
 
-SAVES_LIMIT = 5
-HISTORY_LIMIT = 10
 
 
 # ✅ Получаем состояние из кэша или создаём новое состояние
