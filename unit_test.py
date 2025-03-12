@@ -107,7 +107,9 @@ class TestBotActions(unittest.TestCase):
             execute_action(self.chat_id, self.state, action)
 
             self.assertEqual(self.state["options"]["🔥 Тайный путь"], "test_secret")
-
+            
+             # ✅ Проверяем, что характеристика secret еще НЕ инициализирована
+            self.assertNotIn("secret", self.state["characteristics"])
             message = type(
                 "Message", 
                 (), 
@@ -144,6 +146,26 @@ class TestBotActions(unittest.TestCase):
 
                     # ✅ Проверяем финальное значение speed (не должно измениться)
                     self.assertEqual(self.state["characteristics"]["speed"]["value"], 10)
+
+        print("✅ Тест успешно пройден!")
+
+    def test_image(self):
+        """Тест отправки изображения"""
+        print("➡️ Запуск test_image")
+
+        with patch("handlers.game_handler.chapters", test_chapters):
+            with patch("handlers.game_handler.bot.send_photo") as mock_send_photo:
+                # ✅ Устанавливаем главу и вызываем отправку
+                self.state["chapter"] = "test_image"
+                send_chapter(self.chat_id)
+
+                # ✅ Проверяем, что send_photo вызван с правильным путем
+                mock_send_photo.assert_called_once()
+
+                # ✅ Проверяем параметры вызова
+                args, _ = mock_send_photo.call_args
+                file_path = args[1].name if len(args) > 1 else None
+                self.assertEqual(file_path, "data/Images/3.JPG")
 
         print("✅ Тест успешно пройден!")
 

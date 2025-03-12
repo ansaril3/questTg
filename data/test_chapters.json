@@ -94,5 +94,11 @@
                 "name": "Сила"
             }
         }
+    ],
+    "test_image": [
+        {
+            "type": "image",
+            "value": "/Images/3.JPG"
+        }
     ]
 }
