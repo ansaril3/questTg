@@ -1,0 +1,78 @@
+{
+    "test_start": [
+        {
+            "type": "text",
+            "value": "Начало игры"
+        },
+        {
+            "type": "assign",
+            "value": {
+                "key": "strength",
+                "value": "10",
+                "name": "Сила"
+            }
+        },
+        {
+            "type": "if",
+            "value": {
+                "condition": "strength > 5 and gold > 50",
+                "actions": [
+                    {
+                        "type": "text",
+                        "value": "Условие выполнено"
+                    }
+                ],
+                "else_actions": [
+                    {
+                        "type": "text",
+                        "value": "Условие не выполнено"
+                    }
+                ]
+            }
+        },
+        {
+            "type": "btn",
+            "value": {
+                "text": "➡️ Продолжить",
+                "target": "test_end"
+            }
+        },
+        {
+            "type": "xbtn",
+            "value": {
+                "text": "🔥 Тайный путь",
+                "target": "test_secret",
+                "actions": [
+                    {
+                        "type": "assign",
+                        "value": {
+                            "key": "secret",
+                            "value": "1",
+                            "name": "Секрет"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "goto",
+            "value": "test_end"
+        }
+    ],
+    "test_secret": [
+        {
+            "type": "text",
+            "value": "Вы выбрали тайный путь"
+        }
+    ],
+    "test_end": [
+        {
+            "type": "text",
+            "value": "Конец игры"
+        },
+        {
+            "type": "end",
+            "value": ""
+        }
+    ]
+}
