@@ -240,17 +240,20 @@ def send_buttons(chat_id):
     # ✅ Создаём разметку
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
 
-    # ✅ Добавляем динамические кнопки (если есть)
-    dynamic_buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
+    # ✅ Добавляем только реальные кнопки (без _actions)
+    dynamic_buttons = [
+        types.KeyboardButton(text) 
+        for text in state.get("options", {}).keys()
+        if not text.endswith("_actions")  # 🚀 Игнорируем action-кнопки
+    ]
     for i in range(0, len(dynamic_buttons), 2):
-        markup.add(*dynamic_buttons[i:i + 2])  
+        markup.add(*dynamic_buttons[i:i + 2])
 
-    # ✅ Добавляем общие кнопки в интерфейс, НО НЕ В СОСТОЯНИЕ!
+    # ✅ Добавляем общие кнопки в интерфейс (без сохранения в state)
     common_buttons = [types.KeyboardButton(text) for text in COMMON_BUTTONS]
     for i in range(0, len(common_buttons), 2):
         markup.add(*common_buttons[i:i + 2])
 
-    # ✅ Логируем финальный список кнопок (в state только игровые кнопки)
     print(f"📌 Отправляю кнопки: {list(state['options'].keys())}")
 
     # ✅ Отправляем новую клавиатуру
@@ -262,9 +265,15 @@ def execute_action(chat_id, state, action):
     action_type = action["type"]
     value = action["value"]
     print(f"🚀 Вызов действия: {action_type} -> {value}")
+
     if action_type == "text":
         handle_text(chat_id, value)
     elif action_type == "btn" or action_type == "xbtn":
+        # ✅ Удаляем предыдущие связанные кнопки с такими же действиями
+        state["options"].pop(value["text"], None)
+        state["options"].pop(f"{value['text']}_actions", None)
+
+        # ✅ Добавляем новую кнопку
         state["options"][value["text"]] = value["target"]
         if "actions" in value:
             state["options"][f"{value['text']}_actions"] = value["actions"]
