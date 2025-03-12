@@ -204,7 +204,6 @@ def load_game(message):
 @bot.message_handler(func=lambda message: message.text.startswith("Загрузить "))
 def handle_load_choice(message):
     chat_id = message.chat.id
-
     try:
         save_index = int(message.text.split()[1]) - 1
 

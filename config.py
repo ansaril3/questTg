@@ -12,10 +12,14 @@ TOKEN = os.getenv("TOKEN")
 bot = TeleBot(TOKEN)
 
 # Пути к файлам
-CHAPTERS_FILE = "data/chapters.json"
+# ✅ Режим тестирования (0 — боевой режим, 1 — тестовый режим)
+TEST_MODE = 0
+
+# ✅ Устанавливаем путь к файлу в зависимости от режима
+CHAPTERS_FILE = "data/chapters.json" if TEST_MODE == 0 else "data/test_chapters.json"
 INSTRUCTIONS_FILE = "data/instructions.json"
 SAVES_DIR = "saves"
-TEST_CHAPTERS_FILE = "data/test_chapters.json"
+
 
 # Создание папки сохранений, если её нет
 if not os.path.exists(SAVES_DIR):

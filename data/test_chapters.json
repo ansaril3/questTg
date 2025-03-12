@@ -85,7 +85,7 @@
             "value": {
                 "key": "speed",
                 "value": "10",
-                "name": "Сила"
+                "name": "Скорость"
             }
         },
         {
@@ -97,7 +97,7 @@
             "value": {
                 "key": "speed",
                 "value": "20",
-                "name": "Сила"
+                "name": "Скорость"
             }
         }
     ],

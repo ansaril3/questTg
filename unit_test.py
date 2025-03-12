@@ -5,6 +5,7 @@ from config import bot, CHAPTERS_FILE
 from handlers.game_handler import handle_choice, send_chapter, execute_action
 from utils.state_manager import get_state, save_state
 import subprocess
+from handlers.stats_handler import show_characteristics
 
 # Удаляем все папки __pycache__
 subprocess.run("find . -name '__pycache__' -exec rm -rf {} +", shell=True)
@@ -196,6 +197,33 @@ class TestBotActions(unittest.TestCase):
                 args, _ = mock_send_photo.call_args
                 file_path = args[1].name if len(args) > 1 else None
                 self.assertEqual(file_path, "data/Images/3.JPG")
+
+        print("✅ Тест успешно пройден!")
+
+    def test_characteristics(self):
+        """Тест отображения характеристик по кнопке 📊 Характеристики"""
+        print("➡️ Запуск test_characteristics")
+
+        with patch("handlers.game_handler.chapters", test_chapters):
+            with patch("handlers.game_handler.bot.send_message") as mock_send:
+                # ✅ Устанавливаем начальную главу
+                self.state["chapter"] = "test_end"
+                send_chapter(self.chat_id)
+
+                # ✅ Проверяем, что кнопка Характеристики доступна в списке
+                self.assertIn("📊 Характеристики", self.state["options"])
+
+                # ✅ Симулируем нажатие на кнопку Характеристики
+                message = type(
+                    "Message", 
+                    (), 
+                    {"chat": type("Chat", (), {"id": self.chat_id}), "text": "📊 Характеристики"}
+                )
+                show_characteristics(message)
+
+                # ✅ Проверяем, что сообщение с характеристиками отправлено
+                expected_message = "📊 Ваши характеристики:\n🔹 Скорость: 10\n"
+                mock_send.assert_called_with(self.chat_id, expected_message, parse_mode="Markdown")
 
         print("✅ Тест успешно пройден!")
 
