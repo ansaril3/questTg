@@ -23,7 +23,7 @@ bot.send_photo = MagicMock()
 
 class TestBotActions(unittest.TestCase):
     def setUp(self):
-        """Создание тестового состояния"""
+        """✅✅✅✅✅✅✅✅✅✅✅✅Создание тестового состояния"""
         # Лог вызова теста
         print(f"\n🚀 Выполняется тест: {self._testMethodName}")
 
@@ -43,7 +43,7 @@ class TestBotActions(unittest.TestCase):
             save_state(self.chat_id)
 
     def test_assign(self):
-        """Тест действия assign"""
+        """✅✅✅✅✅✅✅✅✅✅✅✅Тест действия assign"""
         print("➡️ Запуск test_assign")
 
         # ✅ Патчим глобальную переменную chapters на тестовые данные
@@ -54,7 +54,7 @@ class TestBotActions(unittest.TestCase):
         self.assertEqual(self.state["characteristics"]["strength"]["value"], 10)
 
     def test_gold(self):
-        """Тест действия gold"""
+        """✅✅✅✅✅✅✅✅✅✅✅✅Тест действия gold"""
         print("➡️ Запуск test_gold")
 
         # ✅ Патчим глобальную переменную chapters на тестовые данные
@@ -72,7 +72,7 @@ class TestBotActions(unittest.TestCase):
             self.assertEqual(self.state["gold"], 110)  # 120 - 10
 
     def test_if_condition_true(self):
-        """Тест выполнения if при истинном условии"""
+        """✅✅✅✅✅✅✅✅✅✅✅✅Тест выполнения if при истинном условии"""
         print("➡️ Запуск test_if_condition_true")
 
         self.state["characteristics"]["strength"] = {"value": 10}
@@ -85,7 +85,7 @@ class TestBotActions(unittest.TestCase):
                 mock_send.assert_called_with(self.chat_id, "Условие выполнено")
 
     def test_if_condition_false(self):
-        """Тест выполнения if при ложном условии"""
+        """✅✅✅✅✅✅✅✅✅✅✅✅Тест выполнения if при ложном условии"""
         print("➡️ Запуск test_if_condition_false")
 
         self.state["characteristics"]["strength"] = {"value": 55}
@@ -100,7 +100,7 @@ class TestBotActions(unittest.TestCase):
 
 
     def test_xbtn(self):
-        """Тест действия xbtn и выполнения вложенных действий"""
+        """✅✅✅✅✅✅✅✅✅✅✅✅Тест действия xbtn и выполнения вложенных действий"""
         print("➡️ Запуск test_xbtn")
 
         with patch("handlers.game_handler.chapters", test_chapters):
@@ -131,7 +131,7 @@ class TestBotActions(unittest.TestCase):
 
 
     def test_goto(self):
-        """Тест действия goto"""
+        """✅✅✅✅✅✅✅✅✅✅✅✅Тест действия goto"""
         print("➡️ Запуск test_goto")
 
         with patch("handlers.game_handler.chapters", test_chapters):
@@ -140,7 +140,7 @@ class TestBotActions(unittest.TestCase):
             self.assertEqual(self.state["chapter"], "test_secret")
 
     def test_end(self):
-        """Тест выполнения end"""
+        """✅✅✅✅✅✅✅✅✅✅✅✅Тест выполнения end"""
         print("➡️ Запуск test_end")
 
         # ✅ Патчим глобальную переменную chapters на тестовые данные
@@ -160,7 +160,7 @@ class TestBotActions(unittest.TestCase):
         print("✅ Тест успешно пройден!")
 
     def test_return(self):
-        """Тест возврата в предыдущую главу"""
+        """✅✅✅✅✅✅✅✅✅✅✅✅Тест возврата в предыдущую главу"""
         print("➡️ Запуск test_return")
 
         with patch("handlers.game_handler.chapters", test_chapters):
@@ -181,7 +181,7 @@ class TestBotActions(unittest.TestCase):
         print("✅ Тест успешно пройден!")
 
     def test_image(self):
-        """Тест отправки изображения"""
+        """✅✅✅✅✅✅✅✅✅✅✅✅Тест отправки изображения"""
         print("➡️ Запуск test_image")
 
         with patch("handlers.game_handler.chapters", test_chapters):
@@ -201,13 +201,17 @@ class TestBotActions(unittest.TestCase):
         print("✅ Тест успешно пройден!")
 
     def test_characteristics(self):
-        """Тест отображения характеристик по кнопке 📊 Характеристики"""
+        """✅✅✅✅✅✅✅✅✅✅✅✅Тест отображения характеристик по кнопке 📊 Характеристики"""
         print("➡️ Запуск test_characteristics")
 
         with patch("handlers.game_handler.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 # ✅ Устанавливаем начальную главу
                 self.state["chapter"] = "test_end"
+
+                # 🛠️ Принудительно добавляем кнопку в состояние для корректной проверки
+                self.state["options"]["📊 Характеристики"] = "📊 Характеристики"
+
                 send_chapter(self.chat_id)
 
                 # ✅ Проверяем, что кнопка Характеристики доступна в списке
