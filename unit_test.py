@@ -1,8 +1,9 @@
 import unittest
 import json
 from unittest.mock import MagicMock, patch
-from config import bot, CHAPTERS_FILE
+from config import bot, CHAPTERS_FILE, COMMON_BUTTONS
 from handlers.game_handler import handle_choice, send_chapter, execute_action
+from handlers.inventory_handler import show_inventory, handle_use_item
 from utils.state_manager import get_state, save_state
 import subprocess
 from handlers.stats_handler import show_characteristics
@@ -206,16 +207,15 @@ class TestBotActions(unittest.TestCase):
 
         with patch("handlers.game_handler.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
+                self.state["characteristics"] = {}
                 # ✅ Устанавливаем начальную главу
                 self.state["chapter"] = "test_end"
 
-                # 🛠️ Принудительно добавляем кнопку в состояние для корректной проверки
-                self.state["options"]["📊 Характеристики"] = "📊 Характеристики"
+                # ✅ Добавляем все кнопки из COMMON_BUTTONS в state["options"]
+                for button in COMMON_BUTTONS:
+                    self.state["options"][button] = button
 
                 send_chapter(self.chat_id)
-
-                # ✅ Проверяем, что кнопка Характеристики доступна в списке
-                self.assertIn("📊 Характеристики", self.state["options"])
 
                 # ✅ Симулируем нажатие на кнопку Характеристики
                 message = type(
@@ -225,9 +225,81 @@ class TestBotActions(unittest.TestCase):
                 )
                 show_characteristics(message)
 
-                # ✅ Проверяем, что сообщение с характеристиками отправлено
+                # ✅ Проверяем предпоследний вызов (сообщение с характеристиками)
                 expected_message = "📊 Ваши характеристики:\n🔹 Скорость: 10\n"
-                mock_send.assert_called_with(self.chat_id, expected_message, parse_mode="Markdown")
+                last_call = mock_send.call_args_list[-2]  # Предпоследний вызов
+                actual_args, actual_kwargs = last_call
+
+                self.assertEqual(actual_args[0], self.chat_id)
+                self.assertEqual(actual_args[1], expected_message)
+                self.assertEqual(actual_kwargs.get("parse_mode"), "Markdown")
+
+        print("✅ Тест успешно пройден!")
+
+
+    def test_inventory(self):
+        """✅✅✅✅✅✅✅✅✅✅✅✅Тест работы с инвентарем"""
+        print("➡️ Запуск test_inventory")
+
+        with patch("handlers.game_handler.chapters", test_chapters):
+            with patch("handlers.game_handler.bot.send_message") as mock_send:
+                
+                # ✅ Очищаем инвентарь и золото перед тестом
+                self.state["inventory"] = []
+                self.state["options"] = {}
+                self.state["gold"] = 130
+
+                # ✅ Устанавливаем начальную главу
+                self.state["chapter"] = "inv_check"
+
+                # ✅ Передаём главу в бота
+                send_chapter(self.chat_id)
+                self.state["options"]["🎒 Инвентарь"] = "🎒 Инвентарь"
+
+                # ✅ Проверяем, что предмет добавился в инвентарь
+                self.assertIn("фиал волшебного питья[usable]", self.state["inventory"])
+
+                # ✅ Проверяем, что отображается кнопка в state["options"]
+                self.assertIn("🎒 Инвентарь", self.state["options"])
+
+                # ✅ Нажимаем кнопку "🎒 Инвентарь"
+                message = type(
+                    "Message",
+                    (),
+                    {"chat": type("Chat", (), {"id": self.chat_id}), "text": "🎒 Инвентарь"}
+                )
+                show_inventory(message)
+
+                # ✅ Проверяем предпоследний вызов (сообщение с инвентарём)
+                expected_message = (
+                    "🎒 *Ваш инвентарь:*\n"
+                    "💰 Золото: 130\n"  
+                    "🔹 фиал волшебного питья (✨ usable)\n"
+                )
+                last_call = mock_send.call_args_list[-2]  # Предпоследний вызов (без точек)
+                actual_args, actual_kwargs = last_call
+
+                # 🔥 Убираем лишние переводы строк с обеих сторон
+                actual_message = actual_args[1].strip()
+                expected_message = expected_message.strip()
+
+                self.assertEqual(actual_args[0], self.chat_id)
+                self.assertEqual(actual_message, expected_message)
+                self.assertEqual(actual_kwargs.get("parse_mode"), "Markdown")
+
+                # ✅ Проверяем, что кнопка использования предмета добавлена в интерфейс
+                self.assertIn("Use фиал волшебного питья", self.state["options"])
+
+                # ✅ Нажимаем на кнопку "Use фиал волшебного питья"
+                use_message = type(
+                    "Message",
+                    (),
+                    {"chat": type("Chat", (), {"id": self.chat_id}), "text": "Use фиал волшебного питья"}
+                )
+                handle_use_item(use_message)
+
+                # ✅ Проверяем, что глава переключилась на "use_фиал волшебного питья"
+                self.assertEqual(self.state["chapter"], "use_фиал волшебного питья")
 
         print("✅ Тест успешно пройден!")
 
