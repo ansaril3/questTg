@@ -122,5 +122,11 @@
                 "name": "Скорость"
             }
         }
+    ],
+    "test_instruction_ch": [
+        {
+            "type": "text",
+            "value": "Это игровая глава"
+        }
     ]
 }
