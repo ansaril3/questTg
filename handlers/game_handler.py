@@ -1,6 +1,7 @@
 from config import bot, chapters, COMMON_BUTTONS, DATA_DIR, SAVES_DIR
 from utils.state_manager import load_specific_state, save_state, get_state, state_cache  
 from utils.helpers import process_inventory_action, replace_variables_in_text, evaluate_condition
+from handlers.instruction_handler import send_instruction, handle_instruction_action
 import telebot.types as types
 from collections import deque
 from datetime import datetime
@@ -46,6 +47,58 @@ def send_chapter(chat_id):
 
     send_buttons(chat_id)
          
+@bot.message_handler(func=lambda message: message.text in get_all_options(message.chat.id))
+def handle_choice(message):
+    chat_id = message.chat.id
+    state = get_state(chat_id)
+
+    print(f"🔘 Нажата кнопка: {message.text}")
+
+    target = state["options"].get(message.text)
+    actions = state["options"].get(f"{message.text}_actions")
+
+    if actions:
+        print(f"✅ Выполняю вложенные действия для {message.text}: {actions}")
+        for sub_action in actions:
+            execute_action(chat_id, state, sub_action)
+
+    # ✅ Обрабатываем кнопки из COMMON_BUTTONS
+    if message.text == "📖 Инструкция":
+        enter_instruction(message)
+        return
+    
+    if message.text == "📊 Характеристики":
+        show_characteristics(message)
+        return
+
+    if message.text == "🎒 Инвентарь":
+        from handlers.inventory_handler import show_inventory
+        show_inventory(message)
+        return
+
+    if message.text == "📥 Сохранить игру":
+        save_game(message)
+        return
+    
+    if message.text == "📤 Загрузить игру":
+        load_game(message)
+        return
+
+    if target == "return":
+        if state["history"]:
+            state["chapter"] = state["history"].pop()
+            send_chapter(chat_id)
+        else:
+            bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
+        return
+
+    if target in chapters:
+        state["history"].append(state["chapter"])
+        state["chapter"] = target
+        send_chapter(chat_id)
+        return
+
+    bot.send_message(chat_id, "⚠️ Некорректный выбор. Попробуйте снова.")
 
 # ✅ Обработчики действий
 def handle_text(chat_id, value):
@@ -117,54 +170,24 @@ def handle_if(chat_id, state, value):
         for sub_action in else_actions:
             execute_action(chat_id, state, sub_action,)
 
-@bot.message_handler(func=lambda message: message.text in get_all_options(message.chat.id))
-def handle_choice(message):
+
+# ✅ Обработчик для кнопки "📖 Инструкция"
+@bot.message_handler(func=lambda message: message.text == "📖 Инструкция")
+def enter_instruction(message):
+    chat_id = message.chat.id
+    send_instruction(chat_id)
+
+# ✅ Обработчик для возврата из инструкции в игру
+@bot.message_handler(func=lambda message: message.text == "⬅️ Вернуться назад")
+def handle_back(message):
     chat_id = message.chat.id
     state = get_state(chat_id)
 
-    print(f"🔘 Нажата кнопка: {message.text}")
-
-    target = state["options"].get(message.text)
-    actions = state["options"].get(f"{message.text}_actions")
-
-    if actions:
-        print(f"✅ Выполняю вложенные действия для {message.text}: {actions}")
-        for sub_action in actions:
-            execute_action(chat_id, state, sub_action)
-
-    # ✅ Обрабатываем кнопки из COMMON_BUTTONS
-    if message.text == "📊 Характеристики":
-        show_characteristics(message)
-        return
-
-    if message.text == "🎒 Инвентарь":
-        from handlers.inventory_handler import show_inventory
-        show_inventory(message)
-        return
-
-    if message.text == "📥 Сохранить игру":
-        save_game(message)
-        return
-    
-    if message.text == "📤 Загрузить игру":
-        load_game(message)
-        return
-
-    if target == "return":
-        if state["history"]:
-            state["chapter"] = state["history"].pop()
-            send_chapter(chat_id)
-        else:
-            bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
-        return
-
-    if target in chapters:
-        state["history"].append(state["chapter"])
-        state["chapter"] = target
+    if state["history"]:
+        state["chapter"] = state["history"].pop()
         send_chapter(chat_id)
-        return
-
-    bot.send_message(chat_id, "⚠️ Некорректный выбор. Попробуйте снова.")
+    else:
+        bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
 
 
 # ✅ Добавляем сохранение состояния после выполнения действий
