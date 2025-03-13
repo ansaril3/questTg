@@ -167,15 +167,6 @@ def handle_choice(message):
     bot.send_message(chat_id, "⚠️ Некорректный выбор. Попробуйте снова.")
 
 
-# ✅ Добавляем лог кнопок после выполнения действий в handle_choice
-@bot.message_handler(func=lambda message: True)
-def log_buttons(message):
-    chat_id = message.chat.id
-    state = get_state(chat_id)
-    buttons = list(state.get("options", {}).keys())
-    print(f"✅ Текущие кнопки: {buttons}")
-
-
 # ✅ Добавляем сохранение состояния после выполнения действий
 @bot.message_handler(func=lambda message: message.text == "📥 Сохранить игру")
 def save_game(message):
@@ -306,3 +297,10 @@ def get_all_options(chat_id):
 
     return options
 
+# ✅ Добавляем лог кнопок после выполнения действий в handle_choice
+@bot.message_handler(func=lambda message: True)
+def log_buttons(message):
+    chat_id = message.chat.id
+    state = get_state(chat_id)
+    buttons = list(state.get("options", {}).keys())
+    print(f"✅ Текущие кнопки: {buttons}")
