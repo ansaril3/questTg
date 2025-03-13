@@ -67,6 +67,11 @@ def handle_choice(message):
         enter_instruction(message)
         return
     
+    # ✅ Проверяем режим "instruction"
+    if state.get("mode") == "instruction":
+        handle_instruction_action(chat_id, message.text)
+        return
+
     if message.text == "📊 Характеристики":
         show_characteristics(message)
         return
@@ -183,12 +188,13 @@ def handle_back(message):
     chat_id = message.chat.id
     state = get_state(chat_id)
 
-    if state["history"]:
-        state["chapter"] = state["history"].pop()
+    if state.get("mode") == "instruction":
+        # ✅ Сохраняем главу инструкции и возвращаемся в игру
+        state["instruction_chapter"] = state.get("instruction_chapter")
+        state["mode"] = "game"
         send_chapter(chat_id)
     else:
-        bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
-
+        bot.send_message(chat_id, "⚠️ Невозможно вернуться назад.")
 
 # ✅ Добавляем сохранение состояния после выполнения действий
 @bot.message_handler(func=lambda message: message.text == "📥 Сохранить игру")

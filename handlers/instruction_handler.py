@@ -2,7 +2,8 @@ import os
 import json
 from config import bot, DATA_DIR
 import telebot.types as types
-from utils.state_manager import state_cache 
+from utils.state_manager import state_cache
+
 
 # ✅ Загружаем instructions.json
 INSTRUCTIONS_FILE = os.path.join(DATA_DIR, "instructions.json")
@@ -16,11 +17,13 @@ def send_instruction(chat_id):
     if not state:
         return
     
-    # ✅ Если глава не указана — берём первую из JSON
-    if "chapter" not in state or state["chapter"] not in instructions:
-        state["chapter"] = list(instructions.keys())[0]  # Берём первую главу
-    
-    chapter_key = state["chapter"]
+    # ✅ Если режим не "instruction", значит это первый вход в инструкцию
+    if state.get("mode") != "instruction":
+        # Сохраняем текущую главу игры в state["chapter"]
+        state["instruction_chapter"] = list(instructions.keys())[0]  # Начинаем с первой главы
+        state["mode"] = "instruction"
+
+    chapter_key = state.get("instruction_chapter")
     chapter = instructions.get(chapter_key)
 
     if not chapter:
@@ -49,7 +52,7 @@ def execute_instruction_action(chat_id, state, action):
         bot.send_message(chat_id, value)
     
     elif action_type == "image":
-        image_path = os.path.join(DATA_DIR, value.replace("\\", "/"))
+        image_path = DATA_DIR + value.replace("\\", "/")
         if os.path.exists(image_path):
             with open(image_path, "rb") as photo:
                 bot.send_photo(chat_id, photo)
@@ -91,16 +94,17 @@ def handle_instruction_action(chat_id, message_text):
     target = state["options"].get(message_text)
 
     if target == "return":
-        if state["history"]:
-            state["chapter"] = state["history"].pop()
-            send_instruction(chat_id)
-        else:
-            bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
-        return
+        if state["mode"] == "instruction":
+            # ✅ Переход в игровой режим
+            state["instruction_chapter"] = state["instruction_chapter"]  # Сохраняем последнюю главу инструкции
+            state["mode"] = "game"
+            from main import send_chapter
+            send_chapter(chat_id)  # Возврат в игру
+            return
     
     # ✅ Если target соответствует следующей главе в instructions.json
     if target in instructions:
-        state["chapter"] = target
+        state["instruction_chapter"] = target
         send_instruction(chat_id)
     else:
         bot.send_message(chat_id, "⚠️ Некорректный выбор. Попробуйте снова.")
