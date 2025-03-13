@@ -1,10 +1,10 @@
 import unittest
 import json
 from unittest.mock import MagicMock, patch
-from config import bot, CHAPTERS_FILE, COMMON_BUTTONS
-from handlers.game_handler import handle_choice, send_chapter, execute_action
+from config import bot, CHAPTERS_FILE, COMMON_BUTTONS, SAVES_DIR
+from handlers.game_handler import handle_choice, send_chapter, execute_action, save_game, load_game, handle_load_choice
 from handlers.inventory_handler import show_inventory, handle_use_item
-from utils.state_manager import get_state, save_state
+from utils.state_manager import get_state, save_state, state_cache
 import subprocess
 from handlers.stats_handler import show_characteristics
 
@@ -300,6 +300,72 @@ class TestBotActions(unittest.TestCase):
 
                 # ✅ Проверяем, что глава переключилась на "use_фиал волшебного питья"
                 self.assertEqual(self.state["chapter"], "use_фиал волшебного питья")
+
+        print("✅ Тест успешно пройден!")
+
+
+    def test_save_and_load(self):
+        """✅✅✅✅✅✅✅✅✅✅✅✅Тест сохранения и загрузки игры"""
+        print("➡️ Запуск test_save_and_load")
+
+        with patch("handlers.game_handler.chapters", test_chapters):
+            with patch("handlers.game_handler.bot.send_message") as mock_send:
+
+                # ✅ Очищаем стейт для чистого теста
+                self.state["chapter"] = "inv_check"
+                self.state["inventory"] = []
+                self.state["gold"] = 100
+                self.state["history"] = []
+                self.state["options"] = {}
+
+                # ✅ Эмулируем сохранение игры
+                save_game(type("Message", (), {"chat": type("Chat", (), {"id": self.chat_id})}))
+
+                # ✅ Проверяем предпоследнее сообщение — сообщение о сохранении
+                last_call = mock_send.call_args_list[-2]
+                actual_args, actual_kwargs = last_call
+
+                self.assertEqual(actual_args[0], self.chat_id)
+                self.assertIn("✅ *Игра сохранена:*", actual_args[1])
+                self.assertEqual(actual_kwargs.get("parse_mode"), "Markdown")
+
+                # ✅ Получаем имя сохранения из стейта
+                save_file = f"{SAVES_DIR}/{self.chat_id}.json"
+                with open(save_file, "r", encoding="utf-8") as file:
+                    existing_data = json.load(file)
+                    last_save_name = sorted(existing_data.keys(), reverse=True)[0]
+
+                # ✅ Меняем главу, чтобы убедиться в изменении после загрузки
+                self.state["chapter"] = "test_end"
+
+                # ✅ Проверяем, что глава действительно сменилась
+                self.assertEqual(self.state["chapter"], "test_end")
+
+                # ✅ Эмулируем открытие меню загрузки
+                load_game(type("Message", (), {"chat": type("Chat", (), {"id": self.chat_id})}))
+
+                # ✅ Проверяем вывод меню сохранений (последний вызов)
+                last_call = mock_send.call_args_list[-1]
+                actual_args, actual_kwargs = last_call
+                print(f"----- сохранения: {actual_args[1]}")
+
+                self.assertEqual(actual_args[0], self.chat_id)
+                self.assertIn("🔄 *Выберите сохранение:*", actual_args[1])
+                self.assertEqual(actual_kwargs.get("parse_mode"), "Markdown")
+
+                # ✅ Эмулируем выбор первого сохранения с точной датой
+                load_message = type(
+                    "Message",
+                    (),
+                    {"chat": type("Chat", (), {"id": self.chat_id}), "text": f"Загрузить 1 ({last_save_name})"}
+                )
+                handle_load_choice(load_message)
+
+                # ✅ 🔥 ОБНОВЛЯЕМ ЛОКАЛЬНОЕ СОСТОЯНИЕ ПОСЛЕ ЗАГРУЗКИ!
+                self.state = state_cache[self.chat_id]
+
+                # ✅ Проверяем, что глава переключилась на `inv_check`
+                self.assertEqual(self.state["chapter"], "inv_check")
 
         print("✅ Тест успешно пройден!")
 
