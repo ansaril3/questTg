@@ -1,14 +1,19 @@
 import unittest
-import json
+import json, subprocess
 from unittest.mock import MagicMock, patch
 from config import TOKEN, CHAPTERS_FILE
 from handlers.game_handler import handle_choice, send_chapter
-from utils.state_manager import load_state, save_state
+from utils.state_manager import load_state, save_state, state_cache
 import telebot
+
+# Удаляем все папки __pycache__
+subprocess.run("find . -name '__pycache__' -exec rm -rf {} +", shell=True)
+print("🗑️ Все папки __pycache__ удалены")
 
 # Загружаем главы
 with open(CHAPTERS_FILE, "r", encoding="utf-8") as file:
     chapters = json.load(file)
+    print(f"📖 Загружено глав: {len(chapters)} из {CHAPTERS_FILE}")
 
 # Создаем бота (отключаем реальный Telegram API)
 bot = telebot.TeleBot(TOKEN)
@@ -21,21 +26,20 @@ bot.send_video = MagicMock()
 bot.send_audio = MagicMock()
 
 
-class TestBot(unittest.TestCase):
-    """Автоматическое тестирование Telegram-бота"""
+class TestBotSequential(unittest.TestCase):
+    """Тест Telegram-бота: поочередное прохождение всех глав"""
 
     def setUp(self):
-        """Создаем тестового пользователя и начальные данные"""
-        self.chat_id = 123456789  # Тестовый ID (НЕ ИСПОЛЬЗУЕТСЯ В ТГ)
-        self.state = load_state(self.chat_id)  # Загружаем состояние
-        self.visited_chapters = set()  # Множество посещенных глав
+        """Инициализация данных для теста"""
+        self.chat_id = 123456789  # Тестовый ID
+        self.errors = []  # Список ошибок
 
-    def send_message_and_check(self, message_text):
-        """Имитация нажатия кнопки (без отправки в Telegram)"""
+    def send_message_and_check(self, message_text, current_chapter):
+        """Имитация нажатия кнопки и проверка"""
         message = type(
-            "Message", 
-            (), 
-            {"chat": type("Chat", (), {"id": self.chat_id}), "text": message_text}
+            "Message",
+            (),
+            {"chat": type("Chat", (), {"id": self.chat_id}), "text": message_text},
         )
         try:
             with patch("telebot.TeleBot.send_message", new=MagicMock()), \
@@ -43,62 +47,77 @@ class TestBot(unittest.TestCase):
                  patch("telebot.TeleBot.send_document", new=MagicMock()), \
                  patch("telebot.TeleBot.send_video", new=MagicMock()), \
                  patch("telebot.TeleBot.send_audio", new=MagicMock()):
-                handle_choice(message)  # Имитируем нажатие кнопки
+                handle_choice(message)  # Имитация нажатия
             return True
         except Exception as e:
-            print(f"❌ Ошибка в '{self.state['chapter']}' при нажатии '{message_text}': {e}")
+            error_msg = f"❌ Ошибка в главе '{current_chapter}' при нажатии '{message_text}': {e}"
+            print(error_msg)
+            self.errors.append(error_msg)
             return False
 
     def extract_options_from_chapter(self, chapter_key):
-        """Получаем список кнопок из главы"""
+        """Извлечение всех кнопок главы"""
         chapter = chapters.get(chapter_key.lower(), [])
         options = {}
         for action in chapter:
             action_type = action["type"]
             value = action["value"]
-
-            # ✅ Поддержка кнопок в формате JSON
-            if action_type in ("btn", "xbtn"):
+            if action_type in ("btn", "xbtn"):  # Только кнопки
                 options[value["text"]] = value["target"].lower()
         return options
 
-    def traverse_chapters(self, chapter_key):
-        """Рекурсивный обход всех глав"""
-        chapter_key = chapter_key.lower()
+    def test_chapters_sequentially(self):
+        """Основной тест: по порядку обходит все главы"""
+        all_chapters = list(chapters.keys())
+        print(f"🚀 Начало тестирования {len(all_chapters)} глав по порядку...")
 
-        if chapter_key in self.visited_chapters:
-            return
-        
-        self.visited_chapters.add(chapter_key)
-        print(f"✅ Тестируем главу: {chapter_key}")
+        for chapter_key in all_chapters:
+            print(f"\n📝 Тестируем главу: {chapter_key}")
 
-        # Устанавливаем текущую главу
-        self.state["chapter"] = chapter_key
-        save_state(self.chat_id)
+            # Установка текущей главыself.state = {
+                
+            state = {
+                "chapter": chapter_key.lower(),
+                "history": [],
+                "options": {},
+                "inventory": [],
+                "gold": 100,
+                "end_triggered": False,
+                "characteristics": {},
+                "saves":[]
+            } 
+            state_cache[self.chat_id] = state  # Кладем в кэш
+            save_state(self.chat_id)  # Сохраняем
 
-        # 🛠 Полностью подменяем `send_message()`, `send_photo()`, `send_document()`
-        with patch("telebot.TeleBot.send_message", new=MagicMock()), \
-             patch("telebot.TeleBot.send_photo", new=MagicMock()), \
-             patch("telebot.TeleBot.send_document", new=MagicMock()), \
-             patch("telebot.TeleBot.send_video", new=MagicMock()), \
-             patch("telebot.TeleBot.send_audio", new=MagicMock()):
+            # Пробуем отправить главу
             try:
-                send_chapter(self.chat_id)  # ⚡️ Вызываем `send_chapter()` БЕЗ API Telegram
+                with patch("telebot.TeleBot.send_message", new=MagicMock()), \
+                     patch("telebot.TeleBot.send_photo", new=MagicMock()), \
+                     patch("telebot.TeleBot.send_document", new=MagicMock()), \
+                     patch("telebot.TeleBot.send_video", new=MagicMock()), \
+                     patch("telebot.TeleBot.send_audio", new=MagicMock()):
+                    send_chapter(self.chat_id)  # Имитация отправки главы
             except Exception as e:
-                print(f"❌ Ошибка в send_chapter({chapter_key}): {e}")
-                return  # Если глава вызывает ошибку, выходим
+                error_msg = f"❌ Ошибка отображения главы '{chapter_key}': {e}"
+                print(error_msg)
+                self.errors.append(error_msg)
+                continue  # Переход к следующей главе
 
-        # Получаем все кнопки из главы
-        options = self.extract_options_from_chapter(chapter_key)
-        for button_text, next_chapter in options.items():
-            print(f"➡️ Нажимаем кнопку: '{button_text}' → '{next_chapter}'")
-            if self.send_message_and_check(button_text):  # Проверяем корректный переход по кнопкам
-                self.traverse_chapters(next_chapter)  # Рекурсивно переходим к следующей главе
+            # Извлекаем кнопки и пробуем нажать
+            options = self.extract_options_from_chapter(chapter_key)
+            for button_text, target_chapter in options.items():
+                print(f"➡️ Проверка кнопки: '{button_text}' (→ {target_chapter})")
+                self.send_message_and_check(button_text, chapter_key)
 
-    def test_bot(self):
-        """Основной тест: проходит по всем главам"""
-        start_chapter = self.state["chapter"].lower()
-        self.traverse_chapters(start_chapter)  # ⚡️ Рекурсивный обход всех глав
+        # ✅ Отчет
+        print("\n📊 ТЕСТ ЗАВЕРШЕН")
+        if self.errors:
+            print(f"\n❗️ Найдено {len(self.errors)} ошибок:")
+            for error in self.errors:
+                print(error)
+            self.fail(f"Обнаружено {len(self.errors)} ошибок. См. выше.")
+        else:
+            print("🎉 Все главы успешно пройдены без ошибок!")
 
 
 if __name__ == "__main__":
