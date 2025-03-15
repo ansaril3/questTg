@@ -19,7 +19,7 @@
         {
             "type": "if",
             "value": {
-                "condition": "strength > 5 and strength < 50",
+                "condition": "strength > 5 and strength < 50 and меч",
                 "actions": [
                     {
                         "type": "text",

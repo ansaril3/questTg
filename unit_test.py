@@ -77,7 +77,7 @@ class TestBotActions(unittest.TestCase):
         print("➡️ Запуск test_if_condition_true")
 
         self.state["characteristics"]["strength"] = {"value": 10}
-
+        self.state["inventory"] = ["меч"]
         # ✅ Патчим глобальную переменную chapters на тестовые данные
         with patch("handlers.game_handler.chapters", test_chapters):
             action = test_chapters["test_start"][3]
