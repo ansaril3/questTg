@@ -7,7 +7,6 @@ def log_event(user_id: int, event_name: str, params: dict = None):
     """Отправить кастомное событие в Firebase Analytics (GA4) через Measurement Protocol"""
     if params is None:
         params = {
-          engagement_time_msec: '10000'
         }
 
     # URL для Measurement Protocol

@@ -28,7 +28,8 @@ COMMON_BUTTONS = [
     "📤 Load game",
     "📊 Characteristics",
     "🎒 Inventory",
-    "📖 Instructions"
+    "📖 Instructions",
+    "💰 Donate" 
 ]
 HISTORY_LIMIT = 10
 
