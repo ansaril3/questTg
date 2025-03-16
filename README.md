@@ -2,7 +2,8 @@
 # QuestTG — Telegram Text Quest Interpreter Bot
 
 **QuestTG** is a Telegram bot for interactive text-based quests.  
-⚙️ This Python implementation is a port of [PolyQuest](https://github.com/PolyQuest/PolyQuest.github.io).
+⚙️ This is a Python implementation of [PolyQuest](https://github.com/PolyQuest/PolyQuest.github.io) which is based on [URQW](https://github.com/urqw/UrqW) language.
+✅ Demo - [Telegram Quest Bot](https://t.me/QuestStroryBot)
 
 ---
 
@@ -11,7 +12,7 @@
 - Support for non-linear interactive text quests.
 - Save and load game progress.
 - Inventory system, player stats, and choice-based navigation.
-- Easily switch between chapters and track history.
+- Easily switch between chapters and adding new quests.
 
 ---
 
@@ -122,6 +123,82 @@ questTg/
 
 ---
 
+## 📜 Adding New Quests
+
+You can easily add your own quests to the bot using the following steps:
+
+### 1. Prepare the Quest File
+
+Place your URQ quest file named `input.txt` inside the `data/` folder.  
+To convert this file into a working JSON format, run the parser:  
+
+```bash
+python utils/parser.py
+```
+
+This will generate a `chapters.json` file containing all quest chapters in a format readable by the bot.
+
+#### ✅ Example `input.txt` (URQ format)
+
+```
+:Prolog3
+Inv+ Медное кольцо
+PLN Как-то раз, следуя по древней Стезе Королей, ты набредаешь на скорчившуюся в пыли старую женщину. Ты переносишь её в тень раскидистой акации и даешь ей напиться из своей фляги. Вскоре она приходит в себя, но, желая убедиться, что с ней всё в порядке, ты решаешь проводить её до ближайшего города.
+BTN Prolog4,Далее
+End
+```
+
+#### ✅ Example `chapters.json` (output)
+
+```json
+"prolog3": [
+    {
+        "type": "inventory",
+        "value": "inv+медное кольцо"
+    },
+    {
+        "type": "text",
+        "value": "Как-то раз, следуя по древней Стезе Королей, ты набредаешь на скорчившуюся в пыли старую женщину. Ты переносишь её в тень раскидистой акации и даешь ей напиться из своей фляги. Вскоре она приходит в себя, но, желая убедиться, что с ней всё в порядке, ты решаешь проводить её до ближайшего города."
+    },
+    {
+        "type": "btn",
+        "value": {
+            "text": "Далее",
+            "target": "prolog4"
+        }
+    }
+]
+```
+
+> ⚠️ **Note:** If some lines were not parsed correctly, they will be saved to `data/rest.txt` for manual review.
+
+---
+
+### 2. Test Your Quest Automatically
+
+To automatically test all chapters and ensure the bot can navigate through them, run:
+
+```bash
+python -m tests.test_chapters
+```
+
+The test results will be saved in `tests/test_chapters.log`.  
+If any issues are found (missing chapters, incorrect links, etc.), they will be reported for fixing.
+
+---
+
+### 3. Run Unit Tests
+
+The bot includes unit tests for core actions like button presses, inventory display, and other mechanics.  
+To run all unit tests, use:
+
+```bash
+python -m unittest tests/unit_test.py -v
+```
+
+---
+
+With these tools, you can quickly add and validate new quests for the bot.
 
 
 ## 📝 License
