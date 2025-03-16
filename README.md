@@ -122,11 +122,7 @@ questTg/
 
 ---
 
-## ⚙️ Optional: Auto-Start Bot on Reboot (Systemd)
 
-If you want to configure automatic bot launch on server reboot, let me know — I can add detailed systemd setup instructions.
-
----
 
 ## 📝 License
 
