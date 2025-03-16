@@ -5,6 +5,8 @@ from config import TOKEN, CHAPTERS_FILE
 from handlers.game_handler import handle_choice, send_chapter
 from utils.state_manager import load_state, save_state, state_cache
 import telebot
+import sys
+from contextlib import redirect_stdout, redirect_stderr
 
 # Удаляем все папки __pycache__
 subprocess.run("find . -name '__pycache__' -exec rm -rf {} +", shell=True)
@@ -80,10 +82,55 @@ class TestBotSequential(unittest.TestCase):
                 "chapter": chapter_key.lower(),
                 "history": [],
                 "options": {},
-                "inventory": [],
-                "gold": 100,
                 "end_triggered": False,
-                "characteristics": {},
+                "inventory": [
+            "фиал волшебного питья[usable]",
+            "кольчуга",
+            "меч"
+        ],
+        "gold": 5,
+        "characteristics": {
+            "m": {
+                "name": "Мастерство: начальный уровень",
+                "value": 11
+            },
+            "m1": {
+                "name": "Мастерство: текущий уровень",
+                "value": 11
+            },
+            "v": {
+                "name": "Выносливость: начальный уровень",
+                "value": 16
+            },
+            "v1": {
+                "name": "Выносливость: текущий уровень",
+                "value": 16
+            },
+            "u": {
+                "name": "удачливость: начальный уровень",
+                "value": 9
+            },
+            "u1": {
+                "name": "Удачливость: Текущий уровень",
+                "value": 9
+            },
+            "kps": {
+                "name": "",
+                "value": -1
+            },
+            "kpg": {
+                "name": "",
+                "value": -1
+            },
+            "kpp": {
+                "name": "",
+                "value": -1
+            },
+            "og": {
+                "name": "",
+                "value": -1
+            }
+            },
                 "saves":[]
             } 
             state_cache[self.chat_id] = state  # Кладем в кэш
@@ -121,4 +168,7 @@ class TestBotSequential(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    with open('test.log', 'w') as f_log:
+        with redirect_stdout(f_log), redirect_stderr(f_log):
+            unittest.main()
+
