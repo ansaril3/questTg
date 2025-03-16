@@ -1,6 +1,9 @@
 __pycache__/
 saves/
+logs/
 *.pyc
 *.log
 .env
 .DS_Store
+output.json
+rest.txt

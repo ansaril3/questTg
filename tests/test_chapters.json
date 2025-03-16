@@ -1,0 +1,132 @@
+{
+    "test_start": [
+        {
+            "type": "text",
+            "value": "Начало игры"
+        },
+        {
+            "type": "assign",
+            "value": {
+                "key": "strength",
+                "value": "10",
+                "name": "Strength"
+            }
+        },
+        {
+            "type": "gold",
+            "value": "100"
+        },
+        {
+            "type": "if",
+            "value": {
+                "condition": "strength > 5 and strength < 50 and sword",
+                "actions": [
+                    {
+                        "type": "text",
+                        "value": "Condition met"
+                    }
+                ],
+                "else_actions": [
+                    {
+                        "type": "text",
+                        "value": "Condition not met"
+                    }
+                ]
+            }
+        },
+        {
+            "type": "btn",
+            "value": {
+                "text": "➡️ Продолжить",
+                "target": "test_end"
+            }
+        },
+        {
+            "type": "xbtn",
+            "value": {
+                "text": "🔥 Secret Path",
+                "target": "test_secret",
+                "actions": [
+                    {
+                        "type": "assign",
+                        "value": {
+                            "key": "secret",
+                            "value": "1",
+                            "name": "Секрет"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "goto",
+            "value": "test_secret"
+        }
+    ],
+    "test_secret": [
+        {
+            "type": "text",
+            "value": "Вы выбрали тайный путь"
+        },
+        {
+            "type": "gold",
+            "value": "+20"
+        }
+    ],
+    "test_return": [
+        {
+            "type": "goto",
+            "value": "return"
+        }
+    ],
+    "test_end": [
+        {
+            "type": "assign",
+            "value": {
+                "key": "speed",
+                "value": "10",
+                "name": "Speed"
+            }
+        },
+        {
+            "type": "end",
+            "value": ""
+        },
+        {
+            "type": "assign",
+            "value": {
+                "key": "speed",
+                "value": "20",
+                "name": "Speed"
+            }
+        }
+    ],
+    "test_image": [
+        {
+            "type": "image",
+            "value": "/Images/3.JPG"
+        }
+    ],
+    "inv_check": [
+        {
+            "type": "inventory",
+            "value": "inv+vial of magic potion[usable]"
+        }
+    ],
+    "use_vial of magic potion": [
+        {
+            "type": "assign",
+            "value": {
+                "key": "speed",
+                "value": "30",
+                "name": "Speed"
+            }
+        }
+    ],
+    "test_instruction_ch": [
+        {
+            "type": "text",
+            "value": "Это игровая глава"
+        }
+    ]
+}
