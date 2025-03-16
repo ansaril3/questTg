@@ -241,9 +241,9 @@ def save_rest_to_file(rest_data, rest_path):
 
 
 if __name__ == "__main__":
-    input_path = 'input.txt'
-    output_path = 'output.json'
-    rest_path = 'rest.txt'
+    input_path = 'data/input.txt'
+    output_path = 'data/chapters.json'
+    rest_path = 'data/rest.txt'
 
     json_data, rest_data = parse_input_to_json(input_path)
     save_json_to_file(json_data, output_path)
