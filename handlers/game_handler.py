@@ -8,11 +8,12 @@ from datetime import datetime
 import os, random, re, json
 from handlers.stats_handler import show_characteristics
 from utils.firebase_analytics import log_event
-
+from utils.error_handler import safe_handler
 
 
 # ✅ Начало игры
 @bot.message_handler(commands=['start'])
+@safe_handler
 def start_game(message):
     user_id = message.chat.id
     state = get_state(user_id)
@@ -51,6 +52,7 @@ def send_chapter(chat_id):
     send_buttons(chat_id)
          
 @bot.message_handler(func=lambda message: message.text in get_all_options(message.chat.id))
+@safe_handler
 def handle_choice(message):
     chat_id = message.chat.id
     state = get_state(chat_id)
@@ -285,36 +287,40 @@ def send_buttons(chat_id):
 
 # ✅ Упрощаем обработку действий
 def execute_action(chat_id, state, action):
-    action_type = action["type"]
-    value = action["value"]
-    print(f"🚀 Вызов действия: {action_type} -> {value}")
+    try:
+        action_type = action["type"]
+        value = action["value"]
+        print(f"🚀 Вызов действия: {action_type} -> {value}")
 
-    if action_type == "text":
-        handle_text(chat_id, value)
-    elif action_type == "btn" or action_type == "xbtn":
-        # ✅ Удаляем предыдущие связанные кнопки с такими же действиями
-        state["options"].pop(value["text"], None)
-        state["options"].pop(f"{value['text']}_actions", None)
+        if action_type == "text":
+            handle_text(chat_id, value)
+        elif action_type == "btn" or action_type == "xbtn":
+            # ✅ Удаляем предыдущие связанные кнопки с такими же действиями
+            state["options"].pop(value["text"], None)
+            state["options"].pop(f"{value['text']}_actions", None)
 
-        # ✅ Добавляем новую кнопку
-        state["options"][value["text"]] = value["target"]
-        if "actions" in value:
-            state["options"][f"{value['text']}_actions"] = value["actions"]
-        print(f"✅ Добавлена кнопка: {value['text']} -> {value['target']}")
-    elif action_type == "inventory":
-        handle_inventory(state, value)
-    elif action_type == "gold":
-        handle_gold(state, value)
-    elif action_type == "assign":
-        handle_assign(state, value)
-    elif action_type == "goto":
-        handle_goto(chat_id, state, value)
-    elif action_type == "image":
-        handle_image(chat_id, value)
-    elif action_type == "if":
-        handle_if(chat_id, state, value)
-    elif action_type == "end":
-        state["end_triggered"] = True
+            # ✅ Добавляем новую кнопку
+            state["options"][value["text"]] = value["target"]
+            if "actions" in value:
+                state["options"][f"{value['text']}_actions"] = value["actions"]
+            print(f"✅ Добавлена кнопка: {value['text']} -> {value['target']}")
+        elif action_type == "inventory":
+            handle_inventory(state, value)
+        elif action_type == "gold":
+            handle_gold(state, value)
+        elif action_type == "assign":
+            handle_assign(state, value)
+        elif action_type == "goto":
+            handle_goto(chat_id, state, value)
+        elif action_type == "image":
+            handle_image(chat_id, value)
+        elif action_type == "if":
+            handle_if(chat_id, state, value)
+        elif action_type == "end":
+            state["end_triggered"] = True
+    except Exception as e:
+        print(f"❌ Ошибка при выполнении действия {action}: {e}")
+        bot.send_message(chat_id, "⚠️ Произошла ошибка при выполнении действия. Игра продолжается.")
 
 # ✅ Упрощаем получение всех вариантов кнопок
 def get_all_options(chat_id):
