@@ -5,7 +5,7 @@ from config import TOKEN, CHAPTERS_FILE
 from handlers.game_handler import handle_choice, send_chapter
 from utils.state_manager import load_state, save_state, state_cache
 import telebot
-import sys
+import sys, os
 from contextlib import redirect_stdout, redirect_stderr
 
 # Remove all __pycache__ folders
@@ -167,6 +167,6 @@ class TestBotSequential(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    with open('test.log', 'w') as f_log:
+    with open('tests/test_chapters.log', 'w') as f_log:
         with redirect_stdout(f_log), redirect_stderr(f_log):
             unittest.main()

@@ -14,8 +14,8 @@ API_SECRET = os.getenv("API_SECRET")  # ⚙️ Create in Measurement Protocol AP
 
 bot = TeleBot(TOKEN)
 
-# ✅ Test mode (0 — production mode, 1 — test mode turn off firebase)
-TEST_MODE = 1
+# ✅ Prod mode (0 — test mode turn off firebase, 1 — production mode)
+PROD_MODE = 0
 
 CHAPTERS_FILE = "data/chapters.json" 
 INSTRUCTIONS_FILE = "data/instructions.json"

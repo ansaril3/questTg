@@ -21,7 +21,6 @@ def collect_usable_items(chapters):
         if chapter_id.lower().startswith('use_'):
             item_name = chapter_id[4:]
             usable_items.add(item_name.lower())
-            print(f"usable:{item_name.lower()}!")
     return usable_items
 
 def parse_action(line, usable_items, chapter_id, rest_data):
@@ -80,10 +79,8 @@ def parse_inventory_action(line, usable_items, rest_data, chapter_id):
             return {"type": "gold", "value": f"+{amount[0]}" if line_lower.startswith('inv+') else f"-{amount[0]}"}
     else:
         item = line[5:].strip().lower()  # Convert to lowercase
-        print(f"check item ={item}!")
         if item in usable_items:
             item += "[usable]"
-            print(f"usable!")
         return {"type": "inventory", "value": f"inv+{item}" if line_lower.startswith('inv+') else f"inv-{item}"}
     
 def parse_actions(actions_list, usable_items, chapter_id, rest_data):
@@ -241,9 +238,9 @@ def save_rest_to_file(rest_data, rest_path):
 
 
 if __name__ == "__main__":
-    input_path = 'data/input.txt'
+    input_path = 'data/input.txt' #input quest file
     output_path = 'data/chapters.json'
-    rest_path = 'data/rest.txt'
+    rest_path = 'data/rest.txt' # strings that didn't parsed 
 
     json_data, rest_data = parse_input_to_json(input_path)
     save_json_to_file(json_data, output_path)

@@ -1,4 +1,4 @@
-from config import bot, chapters, COMMON_BUTTONS, DATA_DIR, SAVES_DIR, TEST_MODE
+from config import bot, chapters, COMMON_BUTTONS, DATA_DIR, SAVES_DIR, PROD_MODE
 from utils.state_manager import load_specific_state, save_state, get_state, state_cache  
 from utils.helpers import process_inventory_action, replace_variables_in_text, evaluate_condition
 from handlers.instruction_handler import send_instruction, handle_instruction_action
@@ -31,7 +31,7 @@ def send_chapter(chat_id):
     chapter_key = state["chapter"]
     chapter = chapters.get(chapter_key)
     print(f"------------------------CHAPTER: {chapter_key}")
-    if TEST_MODE == 0:
+    if PROD_MODE == 1:
         log_event(chat_id, "chapter_opened", {"chapter": chapter_key})
     
     if not chapter:
