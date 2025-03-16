@@ -2,7 +2,7 @@
 # QuestTG — Telegram Text Quest Interpreter Bot
 
 **QuestTG** is a Telegram bot for interactive text-based quests.  
-⚙️ This is a Python implementation of [PolyQuest](https://github.com/PolyQuest/PolyQuest.github.io) which is based on [URQW](https://github.com/urqw/UrqW) language.
+⚙️ This is a Python implementation of [PolyQuest](https://github.com/PolyQuest/PolyQuest.github.io) which is based on [URQW](https://github.com/urqw/UrqW) language.  
 ✅ Demo - [Telegram Quest Bot](https://t.me/QuestStroryBot)
 
 ---
@@ -13,6 +13,7 @@
 - Save and load game progress.
 - Inventory system, player stats, and choice-based navigation.
 - Easily switch between chapters and adding new quests.
+- Users activity monitoring with google analytics.
 
 ---
 
@@ -63,7 +64,6 @@ Example content:
 
 ```ini
 TOKEN=your_telegram_bot_token
-FIREBASE_PROJECT_ID=your_firebase_project_id
 MEASUREMENT_ID=your_google_analytics_id
 API_SECRET=your_google_api_secret
 ```
@@ -71,6 +71,7 @@ API_SECRET=your_google_api_secret
 > ⚠️ **Note**: Never share your `.env` file publicly.
 
 ---
+
 
 ### 6. ✅ Run the bot
 
@@ -206,5 +207,5 @@ With these tools, you can quickly add and validate new quests for the bot.
 MIT License
 
 ---
-
+Contact: ansaril3g@gmail.com  
 **Feel free to contribute or raise issues!**
