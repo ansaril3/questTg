@@ -9,7 +9,7 @@
             "value": {
                 "key": "strength",
                 "value": "10",
-                "name": "Сила"
+                "name": "Strength"
             }
         },
         {
@@ -19,17 +19,17 @@
         {
             "type": "if",
             "value": {
-                "condition": "strength > 5 and strength < 50 and меч",
+                "condition": "strength > 5 and strength < 50 and sword",
                 "actions": [
                     {
                         "type": "text",
-                        "value": "Условие выполнено"
+                        "value": "Condition met"
                     }
                 ],
                 "else_actions": [
                     {
                         "type": "text",
-                        "value": "Условие не выполнено"
+                        "value": "Condition not met"
                     }
                 ]
             }
@@ -44,7 +44,7 @@
         {
             "type": "xbtn",
             "value": {
-                "text": "🔥 Тайный путь",
+                "text": "🔥 Secret Path",
                 "target": "test_secret",
                 "actions": [
                     {
@@ -85,7 +85,7 @@
             "value": {
                 "key": "speed",
                 "value": "10",
-                "name": "Скорость"
+                "name": "Speed"
             }
         },
         {
@@ -97,7 +97,7 @@
             "value": {
                 "key": "speed",
                 "value": "20",
-                "name": "Скорость"
+                "name": "Speed"
             }
         }
     ],
@@ -110,16 +110,16 @@
     "inv_check": [
         {
             "type": "inventory",
-            "value": "inv+фиал волшебного питья[usable]"
+            "value": "inv+vial of magic potion[usable]"
         }
     ],
-    "use_фиал волшебного питья": [
+    "use_vial of magic potion": [
         {
             "type": "assign",
             "value": {
                 "key": "speed",
                 "value": "30",
-                "name": "Скорость"
+                "name": "Speed"
             }
         }
     ],

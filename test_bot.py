@@ -8,19 +8,19 @@ import telebot
 import sys
 from contextlib import redirect_stdout, redirect_stderr
 
-# Удаляем все папки __pycache__
+# Remove all __pycache__ folders
 subprocess.run("find . -name '__pycache__' -exec rm -rf {} +", shell=True)
-print("🗑️ Все папки __pycache__ удалены")
+print("🗑️ All __pycache__ folders have been deleted")
 
-# Загружаем главы
+# Load chapters
 with open(CHAPTERS_FILE, "r", encoding="utf-8") as file:
     chapters = json.load(file)
-    print(f"📖 Загружено глав: {len(chapters)} из {CHAPTERS_FILE}")
+    print(f"📖 Loaded {len(chapters)} chapters from {CHAPTERS_FILE}")
 
-# Создаем бота (отключаем реальный Telegram API)
+# Create the bot (disable real Telegram API)
 bot = telebot.TeleBot(TOKEN)
 
-# Глобально заменяем все отправки сообщений в Telegram
+# Globally mock all Telegram message sending functions
 bot.send_message = MagicMock()
 bot.send_photo = MagicMock()
 bot.send_document = MagicMock()
@@ -29,15 +29,15 @@ bot.send_audio = MagicMock()
 
 
 class TestBotSequential(unittest.TestCase):
-    """Тест Telegram-бота: поочередное прохождение всех глав"""
+    """Test for Telegram bot: sequentially go through all chapters"""
 
     def setUp(self):
-        """Инициализация данных для теста"""
-        self.chat_id = 123456789  # Тестовый ID
-        self.errors = []  # Список ошибок
+        """Initialize data for the test"""
+        self.chat_id = 123456789  # Test ID
+        self.errors = []  # List of errors
 
     def send_message_and_check(self, message_text, current_chapter):
-        """Имитация нажатия кнопки и проверка"""
+        """Simulate button press and check"""
         message = type(
             "Message",
             (),
@@ -49,35 +49,34 @@ class TestBotSequential(unittest.TestCase):
                  patch("telebot.TeleBot.send_document", new=MagicMock()), \
                  patch("telebot.TeleBot.send_video", new=MagicMock()), \
                  patch("telebot.TeleBot.send_audio", new=MagicMock()):
-                handle_choice(message)  # Имитация нажатия
+                handle_choice(message)  # Simulate the press
             return True
         except Exception as e:
-            error_msg = f"❌ Ошибка в главе '{current_chapter}' при нажатии '{message_text}': {e}"
+            error_msg = f"❌ Error in chapter '{current_chapter}' when pressing '{message_text}': {e}"
             print(error_msg)
             self.errors.append(error_msg)
             return False
 
     def extract_options_from_chapter(self, chapter_key):
-        """Извлечение всех кнопок главы"""
+        """Extract all buttons from a chapter"""
         chapter = chapters.get(chapter_key.lower(), [])
         options = {}
         for action in chapter:
             action_type = action["type"]
             value = action["value"]
-            if action_type in ("btn", "xbtn"):  # Только кнопки
+            if action_type in ("btn", "xbtn"):  # Only buttons
                 options[value["text"]] = value["target"].lower()
         return options
 
     def test_chapters_sequentially(self):
-        """Основной тест: по порядку обходит все главы"""
+        """Main test: go through all chapters in order"""
         all_chapters = list(chapters.keys())
-        print(f"🚀 Начало тестирования {len(all_chapters)} глав по порядку...")
+        print(f"🚀 Starting test for {len(all_chapters)} chapters in order...")
 
         for chapter_key in all_chapters:
-            print(f"\n📝 Тестируем главу: {chapter_key}")
+            print(f"\n📝 Testing chapter: {chapter_key}")
 
-            # Установка текущей главыself.state = {
-                
+            # Set the current chapter state
             state = {
                 "chapter": chapter_key.lower(),
                 "history": [],
@@ -143,32 +142,31 @@ class TestBotSequential(unittest.TestCase):
                      patch("telebot.TeleBot.send_document", new=MagicMock()), \
                      patch("telebot.TeleBot.send_video", new=MagicMock()), \
                      patch("telebot.TeleBot.send_audio", new=MagicMock()):
-                    send_chapter(self.chat_id)  # Имитация отправки главы
+                    send_chapter(self.chat_id)  # Simulate sending the chapter
             except Exception as e:
-                error_msg = f"❌ Ошибка отображения главы '{chapter_key}': {e}"
+                error_msg = f"❌ Error displaying chapter '{chapter_key}': {e}"
                 print(error_msg)
                 self.errors.append(error_msg)
-                continue  # Переход к следующей главе
+                continue  # Move to next chapter
 
-            # Извлекаем кнопки и пробуем нажать
+            # Extract buttons and try pressing them
             options = self.extract_options_from_chapter(chapter_key)
             for button_text, target_chapter in options.items():
-                print(f"➡️ Проверка кнопки: '{button_text}' (→ {target_chapter})")
+                print(f"➡️ Checking button: '{button_text}' (→ {target_chapter})")
                 self.send_message_and_check(button_text, chapter_key)
 
-        # ✅ Отчет
-        print("\n📊 ТЕСТ ЗАВЕРШЕН")
+        # ✅ Report
+        print("\n📊 TEST COMPLETED")
         if self.errors:
-            print(f"\n❗️ Найдено {len(self.errors)} ошибок:")
+            print(f"\n❗️ Found {len(self.errors)} errors:")
             for error in self.errors:
                 print(error)
-            self.fail(f"Обнаружено {len(self.errors)} ошибок. См. выше.")
+            self.fail(f"Found {len(self.errors)} errors. See above.")
         else:
-            print("🎉 Все главы успешно пройдены без ошибок!")
+            print("🎉 All chapters passed without errors!")
 
 
 if __name__ == "__main__":
     with open('test.log', 'w') as f_log:
         with redirect_stdout(f_log), redirect_stderr(f_log):
             unittest.main()
-

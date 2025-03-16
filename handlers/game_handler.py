@@ -11,7 +11,7 @@ from utils.firebase_analytics import log_event
 from utils.error_handler import safe_handler
 
 
-# ✅ Начало игры
+# ✅ Start of the game
 @bot.message_handler(commands=['start'])
 @safe_handler
 def start_game(message):
@@ -20,7 +20,7 @@ def start_game(message):
     send_chapter(user_id)
 
 
-# ✅ Отправка главы игроку
+# ✅ Sending the chapter to the player
 def send_chapter(chat_id):
     state = state_cache[chat_id]
 
@@ -34,7 +34,7 @@ def send_chapter(chat_id):
     log_event(chat_id, "chapter_opened", {"chapter": chapter_key})
     
     if not chapter:
-        bot.send_message(chat_id, "Ошибка: глава не найдена.")
+        bot.send_message(chat_id, "Error: Chapter not found.")
         return
 
     state["options"] = {}
@@ -44,7 +44,7 @@ def send_chapter(chat_id):
         
         execute_action(chat_id, state, action)
 
-        # ✅ Остановка выполнения, если сработал end
+        # ✅ Stop execution if 'end' is triggered
         if state.get("end_triggered"):
             state["end_triggered"] = False
             break
@@ -57,40 +57,40 @@ def handle_choice(message):
     chat_id = message.chat.id
     state = get_state(chat_id)
 
-    print(f"🔘 Нажата кнопка: {message.text}")
+    print(f"🔘 Button pressed: {message.text}")
 
     target = state["options"].get(message.text)
     actions = state["options"].get(f"{message.text}_actions")
 
     if actions:
-        print(f"✅ Выполняю вложенные действия для {message.text}: {actions}")
+        print(f"✅ Executing nested actions for {message.text}: {actions}")
         for sub_action in actions:
             execute_action(chat_id, state, sub_action)
 
-    # ✅ Обрабатываем кнопки из COMMON_BUTTONS
-    if message.text == "📖 Инструкция":
+    # ✅ Handling buttons from COMMON_BUTTONS
+    if message.text == "📖 Instructions":
         enter_instruction(message)
         return
     
-    # ✅ Проверяем режим "instruction"
+    # ✅ Checking "instruction" mode
     if state.get("mode") == "instruction":
         handle_instruction_action(chat_id, message.text)
         return
 
-    if message.text == "📊 Характеристики":
+    if message.text == "📊 Characteristics":
         show_characteristics(message)
         return
 
-    if message.text == "🎒 Инвентарь":
+    if message.text == "🎒 Inventory":
         from handlers.inventory_handler import show_inventory
         show_inventory(message)
         return
 
-    if message.text == "📥 Сохранить игру":
+    if message.text == "📥 Save game":
         save_game(message)
         return
     
-    if message.text == "📤 Загрузить игру":
+    if message.text == "📤 Load game":
         load_game(message)
         return
 
@@ -99,7 +99,7 @@ def handle_choice(message):
             state["chapter"] = state["history"].pop()
             send_chapter(chat_id)
         else:
-            bot.send_message(chat_id, "⚠️ Нет предыдущей главы для возврата.")
+            bot.send_message(chat_id, "⚠️ No previous chapter to return to.")
         return
 
     if target in chapters:
@@ -108,9 +108,9 @@ def handle_choice(message):
         send_chapter(chat_id)
         return
 
-    bot.send_message(chat_id, "⚠️ Некорректный выбор. Попробуйте снова.")
+    bot.send_message(chat_id, "⚠️ Invalid choice. Try again.")
 
-# ✅ Обработчики действий
+# ✅ Action handlers
 def handle_text(chat_id, value):
     state = state_cache[chat_id]
     new_value = replace_variables_in_text(state, value)
@@ -129,7 +129,7 @@ def handle_gold(state, value):
         else:
             state["gold"] = int(value)
     except Exception as e:
-        print(f"Ошибка в обработке золота: {e}")
+        print(f"Error in handling gold: {e}")
 
 def handle_assign(state, value):
     key = value["key"].lower()
@@ -164,7 +164,7 @@ def handle_image(chat_id, value):
         with open(image_path, "rb") as photo:
             bot.send_photo(chat_id, photo)
     else:
-        bot.send_message(chat_id, f"⚠️ Изображение не найдено: {value}")
+        bot.send_message(chat_id, f"⚠️ Image not found: {value}")
 
 def handle_if(chat_id, state, value):
     condition = value["condition"]
@@ -172,55 +172,55 @@ def handle_if(chat_id, state, value):
     else_actions = value.get("else_actions", [])
 
     if evaluate_condition(state, condition):
-        print(f"✅ Условие ИСТИННО: {condition}")
+        print(f"✅ Condition is TRUE: {condition}")
         for sub_action in actions:
             execute_action(chat_id, state, sub_action)
     else:
-        print(f"❌ Условие ЛОЖНО: {condition}")
+        print(f"❌ Condition is FALSE: {condition}")
         for sub_action in else_actions:
             execute_action(chat_id, state, sub_action,)
 
 
-# ✅ Обработчик для кнопки "📖 Инструкция"
-@bot.message_handler(func=lambda message: message.text == "📖 Инструкция")
+# ✅ Instruction button handler
+@bot.message_handler(func=lambda message: message.text == "📖 Instructions")
 def enter_instruction(message):
     chat_id = message.chat.id
     send_instruction(chat_id)
 
-# ✅ Обработчик для возврата из инструкции в игру
-@bot.message_handler(func=lambda message: message.text == "⬅️ Вернуться назад")
+# ✅ Back from instructions to the game handler
+@bot.message_handler(func=lambda message: message.text == "⬅️ Go back")
 def handle_back(message):
     chat_id = message.chat.id
     state = get_state(chat_id)
 
     if state.get("mode") == "instruction":
-        # ✅ Сохраняем главу инструкции и возвращаемся в игру
+        # ✅ Save instruction chapter and return to the game
         state["instruction_chapter"] = state.get("instruction_chapter")
         state["mode"] = "game"
         send_chapter(chat_id)
     else:
-        bot.send_message(chat_id, "⚠️ Невозможно вернуться назад.")
+        bot.send_message(chat_id, "⚠️ Cannot go back.")
 
-# ✅ Добавляем сохранение состояния после выполнения действий
-@bot.message_handler(func=lambda message: message.text == "📥 Сохранить игру")
+# ✅ Add state saving after actions are executed
+@bot.message_handler(func=lambda message: message.text == "📥 Save game")
 def save_game(message):
     chat_id = message.chat.id
     state = get_state(chat_id)
 
     save_state(chat_id)
     last_save = state["saves"][-1]["name"]
-    bot.send_message(chat_id, f"✅ *Игра сохранена:* `{last_save}`", parse_mode="Markdown")
+    bot.send_message(chat_id, f"✅ *Game saved:* `{last_save}`", parse_mode="Markdown")
 
     buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
     send_buttons(chat_id)
 
-@bot.message_handler(func=lambda message: message.text == "📤 Загрузить игру")
+@bot.message_handler(func=lambda message: message.text == "📤 Load game")
 def load_game(message):
     chat_id = message.chat.id
 
     save_file = f"{SAVES_DIR}/{chat_id}.json"
     if not os.path.exists(save_file):
-        bot.send_message(chat_id, "⚠️ *Нет доступных сохранений!*", parse_mode="Markdown")
+        bot.send_message(chat_id, "⚠️ *No available saves!*", parse_mode="Markdown")
         return
     
     with open(save_file, "r", encoding="utf-8") as file:
@@ -228,12 +228,12 @@ def load_game(message):
 
     markup = types.ReplyKeyboardMarkup(row_width=1, one_time_keyboard=True)
     for i, save_name in enumerate(sorted(existing_data.keys(), reverse=True)):
-        markup.add(types.KeyboardButton(f"Загрузить {i + 1} ({save_name})"))
+        markup.add(types.KeyboardButton(f"Load {i + 1} ({save_name})"))
 
-    bot.send_message(chat_id, "🔄 *Выберите сохранение:*", reply_markup=markup, parse_mode="Markdown")
+    bot.send_message(chat_id, "🔄 *Select a save:*", reply_markup=markup, parse_mode="Markdown")
 
 
-@bot.message_handler(func=lambda message: message.text.startswith("Загрузить "))
+@bot.message_handler(func=lambda message: message.text.startswith("Load "))
 def handle_load_choice(message):
     chat_id = message.chat.id
     try:
@@ -246,64 +246,64 @@ def handle_load_choice(message):
             save_names = sorted(existing_data.keys(), reverse=True)
             selected_save = save_names[save_index]
 
-            # ✅ Загружаем состояние через state_manager
+            # ✅ Load state through state_manager
             load_specific_state(chat_id, selected_save)
 
-            bot.send_message(chat_id, f"✅ *Загружено сохранение:* `{selected_save}`", parse_mode="Markdown")
+            bot.send_message(chat_id, f"✅ *Loaded save:* `{selected_save}`", parse_mode="Markdown")
             send_chapter(chat_id)
 
     except (ValueError, IndexError) as e:
-        print(f"⚠️ Ошибка при выборе сохранения: {e}")
-        bot.send_message(chat_id, "⚠️ *Ошибка выбора сохранения.*", parse_mode="Markdown")
+        print(f"⚠️ Error during save selection: {e}")
+        bot.send_message(chat_id, "⚠️ *Save selection error.*", parse_mode="Markdown")
 
-# ✅ Отправка кнопок напрямую из options
+# ✅ Sending buttons directly from options
 def send_buttons(chat_id):
     state = state_cache.get(chat_id)
     if not state:
         return
     
-    # ✅ Создаём разметку
+    # ✅ Create layout
     markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
 
-    # ✅ Добавляем только реальные кнопки (без _actions)
+    # ✅ Add only real buttons (without _actions)
     dynamic_buttons = [
         types.KeyboardButton(text) 
         for text in state.get("options", {}).keys()
-        if not text.endswith("_actions")  # 🚀 Игнорируем action-кнопки
+        if not text.endswith("_actions")  # 🚀 Ignore action buttons
     ]
     for i in range(0, len(dynamic_buttons), 2):
         markup.add(*dynamic_buttons[i:i + 2])
 
-    # ✅ Добавляем общие кнопки в интерфейс (без сохранения в state)
+    # ✅ Add common buttons to the interface (without saving in state)
     common_buttons = [types.KeyboardButton(text) for text in COMMON_BUTTONS]
     for i in range(0, len(common_buttons), 2):
         markup.add(*common_buttons[i:i + 2])
 
-    print(f"📌 Отправляю кнопки: {list(state['options'].keys())}")
+    print(f"📌 Sending buttons: {list(state['options'].keys())}")
 
-    # ✅ Отправляем новую клавиатуру
+    # ✅ Send the new keyboard
     bot.send_message(chat_id, ".", reply_markup=markup)
 
 
-# ✅ Упрощаем обработку действий
+# ✅ Simplify action handling
 def execute_action(chat_id, state, action):
     try:
         action_type = action["type"]
         value = action["value"]
-        print(f"🚀 Вызов действия: {action_type} -> {value}")
+        print(f"🚀 Calling action: {action_type} -> {value}")
 
         if action_type == "text":
             handle_text(chat_id, value)
         elif action_type == "btn" or action_type == "xbtn":
-            # ✅ Удаляем предыдущие связанные кнопки с такими же действиями
+            # ✅ Remove previous related buttons with the same actions
             state["options"].pop(value["text"], None)
             state["options"].pop(f"{value['text']}_actions", None)
 
-            # ✅ Добавляем новую кнопку
+            # ✅ Add new button
             state["options"][value["text"]] = value["target"]
             if "actions" in value:
                 state["options"][f"{value['text']}_actions"] = value["actions"]
-            print(f"✅ Добавлена кнопка: {value['text']} -> {value['target']}")
+            print(f"✅ Added button: {value['text']} -> {value['target']}")
         elif action_type == "inventory":
             handle_inventory(state, value)
         elif action_type == "gold":
@@ -319,10 +319,10 @@ def execute_action(chat_id, state, action):
         elif action_type == "end":
             state["end_triggered"] = True
     except Exception as e:
-        print(f"❌ Ошибка при выполнении действия {action}: {e}")
-        bot.send_message(chat_id, "⚠️ Произошла ошибка при выполнении действия. Игра продолжается.")
+        print(f"❌ Error executing action {action}: {e}")
+        bot.send_message(chat_id, "⚠️ An error occurred while executing the action. The game continues.")
 
-# ✅ Упрощаем получение всех вариантов кнопок
+# ✅ Simplify getting all button options
 def get_all_options(chat_id):
     state = state_cache.get(chat_id)
     if not state:
@@ -330,15 +330,15 @@ def get_all_options(chat_id):
 
     options = set(state.get("options", {}).keys())
 
-    # ✅ Добавляем общие кнопки из общей переменной
+    # ✅ Add common buttons from the shared variable
     options.update(COMMON_BUTTONS)
 
     return options
 
-# ✅ Добавляем лог кнопок после выполнения действий в handle_choice
+# ✅ Add log of buttons after actions are executed in handle_choice
 @bot.message_handler(func=lambda message: True)
 def log_buttons(message):
     chat_id = message.chat.id
     state = get_state(chat_id)
     buttons = list(state.get("options", {}).keys())
-    print(f"✅ Текущие кнопки: {buttons}")
+    print(f"✅ Current buttons: {buttons}")

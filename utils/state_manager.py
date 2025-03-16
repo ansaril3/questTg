@@ -4,15 +4,13 @@ from collections import deque
 from config import SAVES_DIR, SAVES_LIMIT, HISTORY_LIMIT, first_chapter
 from datetime import datetime
 
-# ✅ Кэш состояний в памяти
+# ✅ State cache in memory
 state_cache = {}
 
-
-
-# ✅ Получаем состояние из кэша или создаём новое состояние
+# ✅ Get state from cache or create a new state
 def get_state(user_id):
     if user_id not in state_cache:
-        # print(f"⚠️ Состояние для пользователя {user_id} отсутствует — создаём новое состояние.")
+        # print(f"⚠️ State for user {user_id} not found — creating a new state.")
         state_cache[user_id] = {
             "chapter": first_chapter,
             "instruction": None,
@@ -25,43 +23,41 @@ def get_state(user_id):
         }
     return state_cache[user_id]
 
-
-# ✅ Сохраняем текущее состояние в общий JSON-файл (по имени сохранения)
+# ✅ Save the current state to a shared JSON file (by save name)
 def save_state(user_id):
     save_file = f"{SAVES_DIR}/{user_id}.json"
 
-    # ✅ Загружаем существующие сохранения из файла (если есть)
+    # ✅ Load existing saves from the file (if any)
     if os.path.exists(save_file):
         with open(save_file, "r", encoding="utf-8") as file:
             existing_data = json.load(file)
     else:
         existing_data = {}
 
-    # ✅ Подготавливаем текущее состояние для сохранения
+    # ✅ Prepare the current state for saving
     state = state_cache[user_id].copy()
     state["history"] = list(state["history"])
     state["saves"] = list(state["saves"])
 
-    # ✅ Создаём уникальное имя сохранения (дата + глава)
+    # ✅ Create a unique save name (date + chapter)
     save_name = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     existing_data[save_name] = state
 
-    # ✅ Ограничиваем количество сохранений в файле
+    # ✅ Limit the number of saves in the file
     if len(existing_data) > SAVES_LIMIT:
         oldest_key = sorted(existing_data.keys())[0]
         del existing_data[oldest_key]
 
-    # ✅ Сохраняем все данные обратно в JSON-файл
+    # ✅ Save all data back to the JSON file
     with open(save_file, "w", encoding="utf-8") as file:
         json.dump(existing_data, file, ensure_ascii=False, indent=4)
 
-    print(f"✅ Состояние сохранено под именем {save_name}")
+    print(f"✅ State saved under the name {save_name}")
 
-    # ✅ Добавляем сохранение в кэш (для быстрого отображения в игре)
+    # ✅ Add the save to the cache (for quick display in the game)
     state_cache[user_id]["saves"].append({"name": save_name, "chapter": state["chapter"]})
 
-
-# ✅ Загружаем последнее сохранение из JSON-файла в кэш
+# ✅ Load the last save from the JSON file into the cache
 def load_state(user_id):
     save_file = f"{SAVES_DIR}/{user_id}.json"
 
@@ -69,24 +65,23 @@ def load_state(user_id):
         with open(save_file, "r", encoding="utf-8") as file:
             existing_data = json.load(file)
 
-            # ✅ Загружаем самое последнее сохранение по времени
+            # ✅ Load the most recent save by time
             last_key = sorted(existing_data.keys())[-1]
             state = existing_data[last_key]
 
-            # ✅ Конвертируем в deque для оперативной работы
+            # ✅ Convert to deque for efficient operations
             state["history"] = deque(state.get("history", []), maxlen=HISTORY_LIMIT)
             state["saves"] = deque(state.get("saves", []), maxlen=SAVES_LIMIT)
 
-            # ✅ Загружаем в кэш
+            # ✅ Load into the cache
             state_cache[user_id] = state
-            print(f"✅ Загружено сохранение: {last_key}")
+            print(f"✅ Loaded save: {last_key}")
             return state
 
-    # ✅ Если данных в файле нет — создаём новое состояние
+    # ✅ If no data is in the file — create a new state
     return get_state(user_id)
 
-
-# ✅ Загрузка конкретного сохранения по имени
+# ✅ Load a specific save by its name
 def load_specific_state(user_id, save_name):
     save_file = f"{SAVES_DIR}/{user_id}.json"
 
@@ -99,9 +94,9 @@ def load_specific_state(user_id, save_name):
                 state["history"] = deque(state.get("history", []), maxlen=HISTORY_LIMIT)
                 state["saves"] = deque(state.get("saves", []), maxlen=SAVES_LIMIT)
 
-                # ✅ Загружаем в кэш
+                # ✅ Load into the cache
                 state_cache[user_id] = state
-                print(f"✅ Загружено сохранение: {save_name}")
+                print(f"✅ Loaded save: {save_name}")
                 return state
 
     return None

@@ -4,49 +4,49 @@ logical_operators = {"and", "or", "not"}
 comparison_operators = {">", "<", ">=", "<=", "==", "!="}
 
 def split_condition(condition):
-    # Разбиваем по логическим операторам, сохраняя их в результирующем массиве
+    # Split by logical operators, keeping them in the resulting array
     parts = re.split(r'(\band\b|\bor\b|\bnot\b)', condition)
     return [part.strip() for part in parts if part.strip()]
 
 def evaluate_condition(state, condition):
-    print(f"🔎 Исходное условие: {condition}")
+    print(f"🔎 Original condition: {condition}")
     
     parts = split_condition(condition)
     evaluated_parts = []
     
     for part in parts:
         if part in logical_operators:
-            # Логический оператор добавляем напрямую
+            # Directly add logical operator
             evaluated_parts.append(part)
         elif has_comparison_operators(part):
-            # Обрабатываем сравнения через eval()
+            # Handle comparisons via eval()
             try:
                 evaluated_part = re.sub(r'\b([A-Za-z_][A-Za-z0-9_]*)\b', 
                                         lambda m: replace_variables_safe(m, state), 
                                         part)
                 evaluated_parts.append(f"({evaluated_part})")
             except Exception as e:
-                print(f"❌ Ошибка при обработке сравнения: {e}")
+                print(f"❌ Error while processing comparison: {e}")
                 return False
         else:
-            # Это может быть имя предмета в инвентаре
+            # This could be an item name in the inventory
             if part in state['inventory']:
                 evaluated_parts.append("True")
             else:
                 evaluated_parts.append("False")
 
-    # Собираем финальное выражение
+    # Build the final expression
     final_condition = " ".join(evaluated_parts)
-    print(f"⚙️ Финальное выражение для eval: {final_condition}")
+    print(f"⚙️ Final expression for eval: {final_condition}")
     
     try:
         local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
         local_vars["state"] = state
         result = eval(final_condition, {}, local_vars)
-        print(f"✅ Результат eval(): {result}")
+        print(f"✅ Result of eval(): {result}")
         return result
     except Exception as e:
-        print(f"❌ Ошибка в evaluate_condition: {e}")
+        print(f"❌ Error in evaluate_condition: {e}")
         return False
 
 def has_comparison_operators(condition):
@@ -66,39 +66,39 @@ def replace_variables(var_name, state):
     var_name_lower = var_name.lower()
     if var_name_lower in state["characteristics"]:
         value = state["characteristics"][var_name_lower].get("value", 0)
-        print(f"✅ Подстановка из характеристик: {var_name} = {value}")
+        print(f"✅ Substituting from characteristics: {var_name} = {value}")
         return str(value)
 
     if var_name_lower in [item.lower() for item in state["inventory"]]:
-        print(f"✅ Подстановка из инвентаря: {var_name} = True")
+        print(f"✅ Substituting from inventory: {var_name} = True")
         return "True"
 
-    print(f"⚠️ Переменная {var_name} не найдена")
+    print(f"⚠️ Variable {var_name} not found")
     return "False"
 
-# ✅ Обработка инвентарных действий напрямую через память
+# ✅ Handling inventory actions directly via memory
 def process_inventory_action(state, action):
     if not action:
-        print(f"⚠️ Пустое значение инвентаря: {action}")
+        print(f"⚠️ Empty inventory value: {action}")
         return
 
     if action.startswith("inv+"):
         item = action[4:].strip()
         if item and item not in state["inventory"]:
             state["inventory"].append(item)
-            print(f"✅ Добавлен предмет в инвентарь: {item}")
+            print(f"✅ Item added to inventory: {item}")
 
     elif action.startswith("inv-"):
         item = action[4:].strip()
         if item in state["inventory"]:
             state["inventory"].remove(item)
-            print(f"✅ Удалён предмет из инвентаря: {item}")
+            print(f"✅ Item removed from inventory: {item}")
     else:
-        print(f"⚠️ Некорректный формат инвентаря: {action}")
+        print(f"⚠️ Invalid inventory format: {action}")
 
-# ✅ Подстановка переменных в текст напрямую через стейт в памяти
+# ✅ Substituting variables in text directly via state in memory
 def replace_variables_in_text(state, text):
-    # ✅ Приводим ключи характеристик к нижнему регистру
+    # ✅ Convert characteristic keys to lowercase
     state["characteristics"] = {k.lower(): v for k, v in state["characteristics"].items()}
     
     def replace_match(match):
@@ -106,14 +106,14 @@ def replace_variables_in_text(state, text):
         if key in state["characteristics"]:
             value = state["characteristics"].get(key, {}).get("value")
             if value is not None:
-                print(f"✅ Подстановка значения {key} → {value}")
+                print(f"✅ Substituting value {key} → {value}")
                 return str(value)
             else:
-                print(f"⚠️ Значение для {key} отсутствует")
+                print(f"⚠️ Value for {key} is missing")
         return match.group(0)
     
-    # ✅ Подставляем значения в текст
+    # ✅ Substitute values into text
     processed_text = re.sub(r'#([A-Za-z0-9_]+)\$', replace_match, text, flags=re.IGNORECASE)
     
-    print(f"✅ Обработанный текст: {processed_text}")
+    print(f"✅ Processed text: {processed_text}")
     return processed_text

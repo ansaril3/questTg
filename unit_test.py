@@ -8,25 +8,25 @@ from utils.state_manager import get_state, save_state, state_cache
 import subprocess
 from handlers.stats_handler import show_characteristics
 
-# Удаляем все папки __pycache__
+# Remove all __pycache__ folders
 subprocess.run("find . -name '__pycache__' -exec rm -rf {} +", shell=True)
-print("🗑️ Все папки __pycache__ удалены")
+print("🗑️ All __pycache__ folders have been deleted")
 
-# Лог при открытии JSON
-print(f"📂 Открываем JSON: {CHAPTERS_FILE}")
+# Log when opening JSON
+print(f"📂 Opening JSON: {CHAPTERS_FILE}")
 with open(CHAPTERS_FILE, "r", encoding="utf-8") as file:
     test_chapters = json.load(file)
-print(f"✅ Загружены главы из JSON: {list(test_chapters.keys())}")
+print(f"✅ Chapters loaded from JSON: {list(test_chapters.keys())}")
 
-# Подменяем Telegram API
+# Mock Telegram API
 bot.send_message = MagicMock()
 bot.send_photo = MagicMock()
 
 class TestBotActions(unittest.TestCase):
     def setUp(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Создание тестового состояния"""
-        # Лог вызова теста
-        print(f"\n🚀 Выполняется тест: {self._testMethodName}")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Creating test state"""
+        # Log test call
+        print(f"\n🚀 Running test: {self._testMethodName}")
 
         self.chat_id = 123456789
         self.state = get_state(self.chat_id)
@@ -44,10 +44,10 @@ class TestBotActions(unittest.TestCase):
             save_state(self.chat_id)
 
     def test_assign(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Тест действия assign"""
-        print("➡️ Запуск test_assign")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Test assign action"""
+        print("➡️ Running test_assign")
 
-        # ✅ Патчим глобальную переменную chapters на тестовые данные
+        # ✅ Mock chapters with test data
         with patch("handlers.game_handler.chapters", test_chapters):
             action = test_chapters["test_start"][1]
             execute_action(self.chat_id, self.state, action)
@@ -55,10 +55,10 @@ class TestBotActions(unittest.TestCase):
         self.assertEqual(self.state["characteristics"]["strength"]["value"], 10)
 
     def test_gold(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Тест действия gold"""
-        print("➡️ Запуск test_gold")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Test gold action"""
+        print("➡️ Running test_gold")
 
-        # ✅ Патчим глобальную переменную chapters на тестовые данные
+        # ✅ Mock chapters with test data
         with patch("handlers.game_handler.chapters", test_chapters):
             action = test_chapters["test_start"][2]
             execute_action(self.chat_id, self.state, action)
@@ -66,74 +66,73 @@ class TestBotActions(unittest.TestCase):
 
             action = test_chapters["test_secret"][1]
             execute_action(self.chat_id, self.state, action)
-            self.assertEqual(self.state["gold"], 120)  # +20 из test_secret
+            self.assertEqual(self.state["gold"], 120)  # +20 from test_secret
 
             action = {"type": "gold", "value": "-10"}
             execute_action(self.chat_id, self.state, action)
             self.assertEqual(self.state["gold"], 110)  # 120 - 10
 
     def test_if_condition_true(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Тест выполнения if при истинном условии"""
-        print("➡️ Запуск test_if_condition_true")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Test if condition when true"""
+        print("➡️ Running test_if_condition_true")
 
         self.state["characteristics"]["strength"] = {"value": 10}
-        self.state["inventory"] = ["меч"]
-        # ✅ Патчим глобальную переменную chapters на тестовые данные
+        self.state["inventory"] = ["sword"]
+        # ✅ Mock chapters with test data
         with patch("handlers.game_handler.chapters", test_chapters):
             action = test_chapters["test_start"][3]
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 execute_action(self.chat_id, self.state, action)
-                mock_send.assert_called_with(self.chat_id, "Условие выполнено")
+                mock_send.assert_called_with(self.chat_id, "Condition met")
 
     def test_if_condition_false(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Тест выполнения if при ложном условии"""
-        print("➡️ Запуск test_if_condition_false")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Test if condition when false"""
+        print("➡️ Running test_if_condition_false")
 
         self.state["characteristics"]["strength"] = {"value": 55}
 
-        # ✅ Патчим глобальную переменную chapters на тестовые данные
+        # ✅ Mock chapters with test data
         with patch("handlers.game_handler.chapters", test_chapters):
             action = test_chapters["test_start"][3]
-            # ✅ Патчим метод send_message из handlers.game_handler
+            # ✅ Mock send_message method from handlers.game_handler
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 execute_action(self.chat_id, self.state, action)
-                mock_send.assert_called_with(self.chat_id, "Условие не выполнено")
+                mock_send.assert_called_with(self.chat_id, "Condition not met")
 
 
     def test_xbtn(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Тест действия xbtn и выполнения вложенных действий"""
-        print("➡️ Запуск test_xbtn")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Test xbtn action and nested actions"""
+        print("➡️ Running test_xbtn")
 
         with patch("handlers.game_handler.chapters", test_chapters):
             action = test_chapters["test_start"][5]
             execute_action(self.chat_id, self.state, action)
 
-            # ✅ Проверяем, что кнопка добавлена в опции
-            self.assertEqual(self.state["options"]["🔥 Тайный путь"], "test_secret")
+            # ✅ Check that the button was added to options
+            self.assertEqual(self.state["options"]["🔥 Secret Path"], "test_secret")
             
-            # ✅ Проверяем, что характеристика secret еще НЕ инициализирована
+            # ✅ Check that the characteristic secret has NOT been initialized yet
             self.assertNotIn("secret", self.state["characteristics"])
 
-            # ✅ Эмулируем нажатие кнопки
+            # ✅ Simulate button click
             message = type(
                 "Message", 
                 (), 
-                {"chat": type("Chat", (), {"id": self.chat_id}), "text": "🔥 Тайный путь"}
+                {"chat": type("Chat", (), {"id": self.chat_id}), "text": "🔥 Secret Path"}
             )
             handle_choice(message)
 
-            # ✅ Проверяем выполнение вложенного действия (assign)
+            # ✅ Check that the nested action (assign) was executed
             self.assertEqual(self.state["characteristics"]["secret"]["value"], 1)
 
-            # ✅ Проверяем, что глава сменилась на "test_secret"
+            # ✅ Check that the chapter changed to "test_secret"
             self.assertEqual(self.state["chapter"], "test_secret")
 
-        print("✅ Тест успешно пройден!")
-
+        print("✅ Test passed!")
 
     def test_goto(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Тест действия goto"""
-        print("➡️ Запуск test_goto")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Test goto action"""
+        print("➡️ Running test_goto")
 
         with patch("handlers.game_handler.chapters", test_chapters):
             action = test_chapters["test_start"][6]
@@ -141,145 +140,145 @@ class TestBotActions(unittest.TestCase):
             self.assertEqual(self.state["chapter"], "test_secret")
 
     def test_end(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Тест выполнения end"""
-        print("➡️ Запуск test_end")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Test end action"""
+        print("➡️ Running test_end")
 
-        # ✅ Патчим глобальную переменную chapters на тестовые данные
+        # ✅ Mock chapters with test data
         with patch("handlers.game_handler.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 with patch("handlers.game_handler.bot.send_photo") as mock_send_photo:
-                    # ✅ Устанавливаем главу и вызываем send_chapter()
+                    # ✅ Set chapter and call send_chapter()
                     self.state["chapter"] = "test_end"
                     send_chapter(self.chat_id)  
 
-                    # ✅ Проверяем, что первое действие (assign) сработало
+                    # ✅ Check that the first action (assign) worked
                     self.assertEqual(self.state["characteristics"]["speed"]["value"], 10)
 
-                    # ✅ Проверяем финальное значение speed (не должно измениться)
+                    # ✅ Check final speed value (should not change)
                     self.assertEqual(self.state["characteristics"]["speed"]["value"], 10)
 
-        print("✅ Тест успешно пройден!")
+        print("✅ Test passed!")
 
     def test_return(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Тест возврата в предыдущую главу"""
-        print("➡️ Запуск test_return")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Test return to previous chapter"""
+        print("➡️ Running test_return")
 
         with patch("handlers.game_handler.chapters", test_chapters):
-            # ✅ Устанавливаем главу в "test_secret"
+            # ✅ Set chapter to "test_secret"
             self.state["chapter"] = "test_secret"
             send_chapter(self.chat_id)
 
-            # ✅ Сохраняем состояние истории
+            # ✅ Save history state
             self.state["history"].append("test_secret")
 
-            # ✅ Переходим в "test_return"
+            # ✅ Change chapter to "test_return"
             self.state["chapter"] = "test_return"
             send_chapter(self.chat_id)
 
-            # ✅ Условие успеха: мы находимся на "test_secret"
+            # ✅ Success condition: we are back at "test_secret"
             self.assertEqual(self.state["chapter"], "test_secret")
 
-        print("✅ Тест успешно пройден!")
+        print("✅ Test passed!")
 
     def test_image(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Тест отправки изображения"""
-        print("➡️ Запуск test_image")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Test image sending"""
+        print("➡️ Running test_image")
 
         with patch("handlers.game_handler.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_photo") as mock_send_photo:
-                # ✅ Устанавливаем главу и вызываем отправку
+                # ✅ Set chapter and call send_photo
                 self.state["chapter"] = "test_image"
                 send_chapter(self.chat_id)
 
-                # ✅ Проверяем, что send_photo вызван с правильным путем
+                # ✅ Check that send_photo was called with the correct path
                 mock_send_photo.assert_called_once()
 
-                # ✅ Проверяем параметры вызова
+                # ✅ Check call parameters
                 args, _ = mock_send_photo.call_args
                 file_path = args[1].name if len(args) > 1 else None
                 self.assertEqual(file_path, "data/Images/3.JPG")
 
-        print("✅ Тест успешно пройден!")
+        print("✅ Test passed!")
 
     def test_characteristics(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Тест отображения характеристик по кнопке 📊 Характеристики"""
-        print("➡️ Запуск test_characteristics")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Test characteristics display on 📊 Characteristics button"""
+        print("➡️ Running test_characteristics")
 
         with patch("handlers.game_handler.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 self.state["characteristics"] = {}
-                # ✅ Устанавливаем начальную главу
+                # ✅ Set initial chapter
                 self.state["chapter"] = "test_end"
 
-                # ✅ Добавляем все кнопки из COMMON_BUTTONS в state["options"]
+                # ✅ Add all buttons from COMMON_BUTTONS to state["options"]
                 for button in COMMON_BUTTONS:
                     self.state["options"][button] = button
 
                 send_chapter(self.chat_id)
 
-                # ✅ Симулируем нажатие на кнопку Характеристики
+                # ✅ Simulate press of Characteristics button
                 message = type(
                     "Message", 
                     (), 
-                    {"chat": type("Chat", (), {"id": self.chat_id}), "text": "📊 Характеристики"}
+                    {"chat": type("Chat", (), {"id": self.chat_id}), "text": "📊 Characteristics"}
                 )
                 show_characteristics(message)
 
-                # ✅ Проверяем предпоследний вызов (сообщение с характеристиками)
-                expected_message = "📊 Ваши характеристики:\n🔹 Скорость: 10\n"
-                last_call = mock_send.call_args_list[-2]  # Предпоследний вызов
+                # ✅ Check the penultimate call (message with characteristics)
+                expected_message = "📊 Your characteristics:\n🔹 Speed: 10\n"
+                last_call = mock_send.call_args_list[-2]  # Penultimate call
                 actual_args, actual_kwargs = last_call
 
                 self.assertEqual(actual_args[0], self.chat_id)
                 self.assertEqual(actual_args[1], expected_message)
                 self.assertEqual(actual_kwargs.get("parse_mode"), "Markdown")
 
-        print("✅ Тест успешно пройден!")
+        print("✅ Test passed!")
 
 
     def test_inventory(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Тест работы с инвентарем"""
-        print("➡️ Запуск test_inventory")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Test inventory functionality"""
+        print("➡️ Running test_inventory")
 
         with patch("handlers.game_handler.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 
-                # ✅ Очищаем инвентарь и золото перед тестом
+                # ✅ Clear inventory and gold before test
                 self.state["inventory"] = []
                 self.state["options"] = {}
                 self.state["gold"] = 130
 
-                # ✅ Устанавливаем начальную главу
+                # ✅ Set initial chapter
                 self.state["chapter"] = "inv_check"
 
-                # ✅ Передаём главу в бота
+                # ✅ Pass chapter to bot
                 send_chapter(self.chat_id)
-                self.state["options"]["🎒 Инвентарь"] = "🎒 Инвентарь"
+                self.state["options"]["🎒 Inventory"] = "🎒 Inventory"
 
-                # ✅ Проверяем, что предмет добавился в инвентарь
-                self.assertIn("фиал волшебного питья[usable]", self.state["inventory"])
+                # ✅ Check that item was added to inventory
+                self.assertIn("vial of magic potion[usable]", self.state["inventory"])
 
-                # ✅ Проверяем, что отображается кнопка в state["options"]
-                self.assertIn("🎒 Инвентарь", self.state["options"])
+                # ✅ Check that the button is displayed in state["options"]
+                self.assertIn("🎒 Inventory", self.state["options"])
 
-                # ✅ Нажимаем кнопку "🎒 Инвентарь"
+                # ✅ Press "🎒 Inventory" button
                 message = type(
                     "Message",
                     (),
-                    {"chat": type("Chat", (), {"id": self.chat_id}), "text": "🎒 Инвентарь"}
+                    {"chat": type("Chat", (), {"id": self.chat_id}), "text": "🎒 Inventory"}
                 )
                 show_inventory(message)
 
-                # ✅ Проверяем предпоследний вызов (сообщение с инвентарём)
+                # ✅ Check penultimate call (inventory message)
                 expected_message = (
-                    "🎒 *Ваш инвентарь:*\n"
-                    "💰 Золото: 130\n"  
-                    "🔹 фиал волшебного питья (✨ usable)\n"
+                    "🎒 *Your inventory:*\n"
+                    "💰 Gold: 130\n"  
+                    "🔹 vial of magic potion (✨ usable)\n"
                 )
-                last_call = mock_send.call_args_list[-2]  # Предпоследний вызов (без точек)
+                last_call = mock_send.call_args_list[-2]  # Penultimate call (without dots)
                 actual_args, actual_kwargs = last_call
 
-                # 🔥 Убираем лишние переводы строк с обеих сторон
+                # 🔥 Remove unnecessary newlines from both sides
                 actual_message = actual_args[1].strip()
                 expected_message = expected_message.strip()
 
@@ -287,88 +286,90 @@ class TestBotActions(unittest.TestCase):
                 self.assertEqual(actual_message, expected_message)
                 self.assertEqual(actual_kwargs.get("parse_mode"), "Markdown")
 
-                # ✅ Проверяем, что кнопка использования предмета добавлена в интерфейс
-                self.assertIn("Use фиал волшебного питья", self.state["options"])
+                # ✅ Check that the item use button was added to the interface
+                self.assertIn("Use vial of magic potion", self.state["options"])
 
-                # ✅ Нажимаем на кнопку "Use фиал волшебного питья"
+                # ✅ Press "Use vial of magic potion" button
                 use_message = type(
                     "Message",
                     (),
-                    {"chat": type("Chat", (), {"id": self.chat_id}), "text": "Use фиал волшебного питья"}
+                    {"chat": type("Chat", (), {"id": self.chat_id}), "text": "Use vial of magic potion"}
                 )
                 handle_use_item(use_message)
 
-                # ✅ Проверяем, что глава переключилась на "use_фиал волшебного питья"
-                self.assertEqual(self.state["chapter"], "use_фиал волшебного питья")
+                # ✅ Check that chapter changed to "use_vial of magic potion"
+                self.assertEqual(self.state["chapter"], "use_vial of magic potion")
 
-        print("✅ Тест успешно пройден!")
+        print("✅ Test passed!")
 
 
     def test_save_and_load(self):
-        """✅✅✅✅✅✅✅✅✅✅✅✅Тест сохранения и загрузки игры"""
-        print("➡️ Запуск test_save_and_load")
+        """✅✅✅✅✅✅✅✅✅✅✅✅Test saving and loading game"""
+        print("➡️ Running test_save_and_load")
 
         with patch("handlers.game_handler.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
 
-                # ✅ Очищаем стейт для чистого теста
+                # ✅ Clear state for a clean test
                 self.state["chapter"] = "inv_check"
                 self.state["inventory"] = []
                 self.state["gold"] = 100
                 self.state["history"] = []
                 self.state["options"] = {}
 
-                # ✅ Эмулируем сохранение игры
+                # ✅ Simulate game save
                 save_game(type("Message", (), {"chat": type("Chat", (), {"id": self.chat_id})}))
 
-                # ✅ Проверяем предпоследнее сообщение — сообщение о сохранении
+                # ✅ Check penultimate message — save confirmation
                 last_call = mock_send.call_args_list[-2]
                 actual_args, actual_kwargs = last_call
 
                 self.assertEqual(actual_args[0], self.chat_id)
-                self.assertIn("✅ *Игра сохранена:*", actual_args[1])
+                self.assertIn("✅ *Game saved:*", actual_args[1])
                 self.assertEqual(actual_kwargs.get("parse_mode"), "Markdown")
 
-                # ✅ Получаем имя сохранения из стейта
+                # ✅ Get save file name from state
                 save_file = f"{SAVES_DIR}/{self.chat_id}.json"
                 with open(save_file, "r", encoding="utf-8") as file:
                     existing_data = json.load(file)
                     last_save_name = sorted(existing_data.keys(), reverse=True)[0]
 
-                # ✅ Меняем главу, чтобы убедиться в изменении после загрузки
+                # ✅ Change chapter to check if it changes after load
                 self.state["chapter"] = "test_end"
 
-                # ✅ Проверяем, что глава действительно сменилась
+                # ✅ Check that the chapter indeed changed
                 self.assertEqual(self.state["chapter"], "test_end")
 
-                # ✅ Эмулируем открытие меню загрузки
+                # ✅ Simulate opening load menu
                 load_game(type("Message", (), {"chat": type("Chat", (), {"id": self.chat_id})}))
 
-                # ✅ Проверяем вывод меню сохранений (последний вызов)
+                # ✅ Checking the output of the save menu (last call)
                 last_call = mock_send.call_args_list[-1]
                 actual_args, actual_kwargs = last_call
-                print(f"----- сохранения: {actual_args[1]}")
+                print(f"----- saves: {actual_args[1]}")
 
                 self.assertEqual(actual_args[0], self.chat_id)
-                self.assertIn("🔄 *Выберите сохранение:*", actual_args[1])
+                self.assertIn("🔄 *Select a save:*", actual_args[1])
                 self.assertEqual(actual_kwargs.get("parse_mode"), "Markdown")
 
-                # ✅ Эмулируем выбор первого сохранения с точной датой
+                # ✅ Simulate selecting the first save with an exact date
                 load_message = type(
                     "Message",
                     (),
-                    {"chat": type("Chat", (), {"id": self.chat_id}), "text": f"Загрузить 1 ({last_save_name})"}
+                    {"chat": type("Chat", (), {"id": self.chat_id}), "text": f"Load 1 ({last_save_name})"}
                 )
                 handle_load_choice(load_message)
 
-                # ✅ 🔥 ОБНОВЛЯЕМ ЛОКАЛЬНОЕ СОСТОЯНИЕ ПОСЛЕ ЗАГРУЗКИ!
+                # ✅ 🔥 UPDATE LOCAL STATE AFTER LOADING!
                 self.state = state_cache[self.chat_id]
 
-                # ✅ Проверяем, что глава переключилась на `inv_check`
+                # ✅ Check that the chapter switched to `inv_check`
                 self.assertEqual(self.state["chapter"], "inv_check")
 
-        print("✅ Тест успешно пройден!")
+        print("✅ Test successfully passed!")
+
 
 
 if __name__ == "__main__":
     unittest.main()
+                # ✅ Check saved games menu output

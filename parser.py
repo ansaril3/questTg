@@ -6,9 +6,9 @@ def read_file(input_path):
         return file.read()
     
 def split_into_chapters(content):
-    # Разделяем по строкам, начинающимся с End
+    # Split by lines starting with 'End'
     chapters = re.split(r'\nEnd\b', content)
-    # Убираем последний элемент, если он пустой
+    # Remove the last element if it's empty
     if chapters[-1].strip() == "":
         chapters = chapters[:-1]
     return chapters
@@ -27,7 +27,7 @@ def collect_usable_items(chapters):
 def parse_action(line, usable_items, chapter_id, rest_data):
     line_lower = line.lower()
     if line.strip().startswith(';') or line.startswith('Pause'):
-        return None  # Пропускаем комментарии и строки с Pause
+        return None  # Skip comments and lines with 'Pause'
 
     if line.lower().startswith('pln'):
         return {"type": "text", "value": line[4:].strip()}
@@ -38,8 +38,8 @@ def parse_action(line, usable_items, chapter_id, rest_data):
             return {
                 "type": "btn",
                 "value": {
-                    "text": parts[1].strip(),  # Текст кнопки сохраняем как есть
-                    "target": parts[0].strip().lower()  # Приводим target к нижнему регистру
+                    "text": parts[1].strip(),  # Keep button text as is
+                    "target": parts[0].strip().lower()  # Convert target to lowercase
                 }
             }
         else:
@@ -50,7 +50,7 @@ def parse_action(line, usable_items, chapter_id, rest_data):
         return parse_inventory_action(line, usable_items, rest_data, chapter_id)
 
     elif line.lower().startswith('goto '):
-        return {"type": "goto", "value": line[5:].strip().lower()}  # Приводим к нижнему регистру
+        return {"type": "goto", "value": line[5:].strip().lower()}  # Convert to lowercase
 
     elif line.lower().startswith('if '):
         return parse_if_action(line, usable_items, chapter_id, rest_data)
@@ -62,7 +62,7 @@ def parse_action(line, usable_items, chapter_id, rest_data):
         return parse_image_action(line)
 
     elif line_lower.startswith('end') and line.strip().lower() == 'end':
-        # Обрабатываем End только если это отдельная строка
+        # Handle 'End' only if it's a separate line
         return {"type": "end", "value": ""}
 
     elif '=' in line:
@@ -79,7 +79,7 @@ def parse_inventory_action(line, usable_items, rest_data, chapter_id):
         if amount:
             return {"type": "gold", "value": f"+{amount[0]}" if line_lower.startswith('inv+') else f"-{amount[0]}"}
     else:
-        item = line[5:].strip().lower()  # Приводим к нижнему регистру
+        item = line[5:].strip().lower()  # Convert to lowercase
         print(f"check item ={item}!")
         if item in usable_items:
             item += "[usable]"
@@ -95,13 +95,13 @@ def parse_actions(actions_list, usable_items, chapter_id, rest_data):
     return parsed_actions
 
 def parse_if_action(line, usable_items, chapter_id, rest_data):
-    line_lower = line.lower()  # Приводим всю строку к нижнему регистру
+    line_lower = line.lower()  # Convert the entire line to lowercase
     if "then" in line_lower:
-        # Разделяем строку на условие и действия
+        # Split the line into condition and actions
         condition_part, actions_part = re.split(r'\bthen\b', line, flags=re.IGNORECASE, maxsplit=1)
-        condition = condition_part[3:].strip().lower()  # Приводим условие к нижнему регистру
+        condition = condition_part[3:].strip().lower()  # Convert condition to lowercase
 
-        # Разделяем действия на then и else
+        # Split actions into then and else
         if "else" in line_lower:
             then_actions, else_actions = re.split(r'\belse\b', actions_part, flags=re.IGNORECASE, maxsplit=1)
             else_actions = else_actions.strip()
@@ -109,17 +109,17 @@ def parse_if_action(line, usable_items, chapter_id, rest_data):
             then_actions = actions_part.strip()
             else_actions = ""
 
-        # Парсим действия для then
+        # Parse actions for then
         then_actions_list = [action.strip() for action in re.split(r'\s*&\s*', then_actions)]
         parsed_then_actions = parse_actions(then_actions_list, usable_items, chapter_id, rest_data)
 
-        # Парсим действия для else, если они есть
+        # Parse actions for else, if any
         parsed_else_actions = []
         if else_actions:
             else_actions_list = [action.strip() for action in re.split(r'\s*&\s*', else_actions)]
             parsed_else_actions = parse_actions(else_actions_list, usable_items, chapter_id, rest_data)
 
-        # Создаем объект if с then и else действиями
+        # Create if object with then and else actions
         if_obj = {
             "type": "if",
             "value": {
@@ -184,11 +184,11 @@ def parse_image_action(line):
 
 def parse_assign_action(line):
     if '=' in line:
-        parts = line.split(';', 1)  # Разделяем по первой точке с запятой
-        key_value = parts[0].strip().split('=', 1)  # Разделяем ключ и значение
-        key = key_value[0].strip().lower()  # Приводим к нижнему регистру
-        value = key_value[1].strip().lower() if len(key_value) > 1 else ""  # Приводим к нижнему регистру
-        name = parts[1].strip() if len(parts) > 1 else ""  # Комментарий сохраняем как есть
+        parts = line.split(';', 1)  # Split by the first semicolon
+        key_value = parts[0].strip().split('=', 1)  # Split into key and value
+        key = key_value[0].strip().lower()  # Convert to lowercase
+        value = key_value[1].strip().lower() if len(key_value) > 1 else ""  # Convert to lowercase
+        name = parts[1].strip() if len(parts) > 1 else ""  # Keep comment as is
 
         return {
             "type": "assign",
@@ -199,19 +199,19 @@ def parse_assign_action(line):
             }
         }
     else:
-        return None  # Если нет '=', это не присваивание
+        return None  # If there's no '=', it's not an assignment
     
 def parse_chapter(chapter, usable_items, rest_data):
     lines = chapter.strip().split('\n')
-    chapter_id = lines[0].strip(':').lower()  # Приводим к нижнему регистру
+    chapter_id = lines[0].strip(':').lower()  # Convert to lowercase
     actions = []
 
     for line in lines[1:]:
-        # Игнорируем пустые строки
+        # Ignore empty lines
         if not line.strip():
             continue
 
-        # Парсим действие
+        # Parse action
         action = parse_action(line, usable_items, chapter_id, rest_data)
         if action:
             actions.append(action)
