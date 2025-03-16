@@ -12,6 +12,7 @@ from handlers.stats_handler import show_characteristics
 subprocess.run("find . -name '__pycache__' -exec rm -rf {} +", shell=True)
 print("🗑️ All __pycache__ folders have been deleted")
 
+CHAPTERS_FILE = "tests/test_chapters.json" 
 # Log when opening JSON
 print(f"📂 Opening JSON: {CHAPTERS_FILE}")
 with open(CHAPTERS_FILE, "r", encoding="utf-8") as file:
@@ -297,8 +298,8 @@ class TestBotActions(unittest.TestCase):
                 )
                 handle_use_item(use_message)
 
-                # ✅ Check that chapter changed to "use_vial of magic potion"
-                self.assertEqual(self.state["chapter"], "use_vial of magic potion")
+                # ✅ Check that the first action (assign) worked
+                self.assertEqual(self.state["characteristics"]["speed"]["value"], 10)
 
         print("✅ Test passed!")
 

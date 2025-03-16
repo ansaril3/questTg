@@ -14,12 +14,10 @@ API_SECRET = os.getenv("API_SECRET")  # ⚙️ Create in Measurement Protocol AP
 
 bot = TeleBot(TOKEN)
 
-# File paths
-# ✅ Test mode (0 — production mode, 1 — test mode)
+# ✅ Test mode (0 — production mode, 1 — test mode turn off firebase)
 TEST_MODE = 1
 
-# ✅ Set file path depending on the mode
-CHAPTERS_FILE = "data/chapters.json" if TEST_MODE == 0 else "data/test_chapters.json"
+CHAPTERS_FILE = "data/chapters.json" 
 INSTRUCTIONS_FILE = "data/instructions.json"
 SAVES_DIR = "saves"
 DATA_DIR = "data"
