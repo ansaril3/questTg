@@ -202,6 +202,7 @@ def parse_chapter(chapter, usable_items, rest_data):
     lines = chapter.strip().split('\n')
     chapter_id = lines[0].strip(':').lower()  # Convert to lowercase
     actions = []
+    current_text = ""  # Переменная для накопления текста из последовательных PLN
 
     for line in lines[1:]:
         # Ignore empty lines
@@ -211,7 +212,23 @@ def parse_chapter(chapter, usable_items, rest_data):
         # Parse action
         action = parse_action(line, usable_items, chapter_id, rest_data)
         if action:
-            actions.append(action)
+            if action["type"] == "text":
+                # Если это PLN, добавляем текст к текущему накопленному тексту
+                if current_text:
+                    current_text += " " + action["value"]
+                else:
+                    current_text = action["value"]
+            else:
+                # Если это не PLN, добавляем накопленный текст как один элемент
+                if current_text:
+                    actions.append({"type": "text", "value": current_text})
+                    current_text = ""
+                # Добавляем текущее действие
+                actions.append(action)
+
+    # Добавляем оставшийся накопленный текст, если он есть
+    if current_text:
+        actions.append({"type": "text", "value": current_text})
 
     return chapter_id, actions
 
