@@ -8,6 +8,9 @@ from telebot import TeleBot
 # Загрузка переменных окружения
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
+FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID") # Create Firebase project -> Settings 
+MEASUREMENT_ID = os.getenv("MEASUREMENT_ID") # ⚙️ Найти в Firebase > Analytics > Data Streams
+API_SECRET = os.getenv("API_SECRET") # ⚙️ Создать в Measurement Protocol API (Google Analytics 4)
 
 bot = TeleBot(TOKEN)
 

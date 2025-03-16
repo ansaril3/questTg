@@ -7,6 +7,8 @@ from collections import deque
 from datetime import datetime
 import os, random, re, json
 from handlers.stats_handler import show_characteristics
+from utils.firebase_analytics import log_event
+
 
 
 # ✅ Начало игры
@@ -28,7 +30,8 @@ def send_chapter(chat_id):
     chapter_key = state["chapter"]
     chapter = chapters.get(chapter_key)
     print(f"------------------------CHAPTER: {chapter_key}")
-
+    log_event(chat_id, "chapter_opened", {"chapter": chapter_key})
+    
     if not chapter:
         bot.send_message(chat_id, "Ошибка: глава не найдена.")
         return
