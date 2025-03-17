@@ -15,7 +15,7 @@ API_SECRET = os.getenv("API_SECRET")  # ⚙️ Create in Measurement Protocol AP
 bot = TeleBot(TOKEN)
 
 # ✅ Prod mode (0 — test mode turn off firebase, 1 — production mode)
-PROD_MODE = 0
+PROD_MODE = 1
 
 CHAPTERS_FILE = "data/chapters.json" 
 INSTRUCTIONS_FILE = "data/instructions.json"
@@ -28,8 +28,8 @@ COMMON_BUTTONS = [
     "📤 Load game",
     "📊 Characteristics",
     "🎒 Inventory",
-    "📖 Instructions",
-    "💰 Donate" 
+    "📖 Instructions"
+    #"💰 Donate" 
 ]
 HISTORY_LIMIT = 10
 

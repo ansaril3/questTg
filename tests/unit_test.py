@@ -26,7 +26,7 @@ bot.send_photo = MagicMock()
 
 class TestBotActions(unittest.TestCase):
     def setUp(self):
-        print(f"\n🚀 Running test: {self._testMethodName}")
+        print(f"\n🚀 -----------Running test: {self._testMethodName}")
         self.chat_id = 123456789
         self.state = get_state(self.chat_id) or {
             "chapter": "test_start",
@@ -141,41 +141,84 @@ class TestBotActions(unittest.TestCase):
         print("✅ Test passed!")
 
     def test_save_and_load(self):
+        """✅✅✅✅✅✅✅✅✅✅✅✅ Test saving and loading game"""
         print("➡️ Running test_save_and_load")
+
         with patch("handlers.game_handler.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
+
+                # ✅ Clear state for a clean test
                 self.state["chapter"] = "inv_check"
                 self.state["inventory"] = []
                 self.state["gold"] = 100
                 self.state["history"] = []
                 self.state["options"] = {}
 
-                # ✅ Save game
+                # ✅ Simulate game save
                 save_game(type("Message", (), {"chat": type("Chat", (), {"id": self.chat_id})}))
 
-                # ✅ Check save confirmation
-                last_call = mock_send.call_args_list[-1]
-                self.assertIn("✅ *Game saved:*", last_call[0][1])
+                # ✅ Check penultimate message — save confirmation
+                last_call = mock_send.call_args_list[-2]
+                actual_args, actual_kwargs = last_call
 
-                # ✅ Load game menu
-                load_game(type("Message", (), {"chat": type("Chat", (), {"id": self.chat_id})}))
-                last_call = mock_send.call_args_list[-1]
-                self.assertIn("🔄 *Select a save:*", last_call[0][1])
+                self.assertEqual(actual_args[0], self.chat_id)
+                self.assertIn("✅ *Game saved:*", actual_args[1])
+                self.assertEqual(actual_kwargs.get("parse_mode"), "Markdown")
 
-                # ✅ Get save name
+                # ✅ Get save file name from state
                 save_file = f"{SAVES_DIR}/{self.chat_id}.json"
                 with open(save_file, "r", encoding="utf-8") as file:
                     existing_data = json.load(file)
                     last_save_name = sorted(existing_data.keys(), reverse=True)[0]
 
-                # ✅ Load save
-                query_load = self.simulate_inline(f"Load 1 ({last_save_name})")
-                handle_load_choice(query_load)
-                self.state = state_cache[self.chat_id]  # Update state
+                # ✅ Change chapter to check if it changes after load
+                self.state["chapter"] = "test_end"
+                self.assertEqual(self.state["chapter"], "test_end")
 
+                # ✅ Simulate opening load menu
+                load_game(type("Message", (), {"chat": type("Chat", (), {"id": self.chat_id})}))
+
+                # ✅ Checking the output of the save menu (last call)
+                last_call = mock_send.call_args_list[-1]
+                actual_args, actual_kwargs = last_call
+                print(f"----- saves: {actual_args[1]}")
+
+                self.assertEqual(actual_args[0], self.chat_id)
+                self.assertIn("🔄 *Select a save:*", actual_args[1])
+                self.assertEqual(actual_kwargs.get("parse_mode"), "Markdown")
+
+                # ✅ Check that inline keyboard is present
+                reply_markup = actual_kwargs.get("reply_markup")
+                self.assertIsNotNone(reply_markup, "❌ No inline keyboard found")
+                self.assertTrue(hasattr(reply_markup, "inline_keyboard"), "❌ reply_markup has no inline_keyboard")
+
+                # ✅ Check that there is at least one save button
+                buttons = reply_markup.inline_keyboard
+                self.assertGreater(len(buttons), 0, "❌ No buttons found in inline keyboard")
+                print(f"✅ Inline buttons for saves: {buttons}")
+
+                # ✅ Simulate selecting the first save (callback query imitation)
+                # Assuming buttons are formatted like [{'text': 'Save 1 (timestamp)', 'callback_data': 'load:timestamp'}]
+                first_button = buttons[0][0]  # First row, first button
+                callback_data = first_button.callback_data
+                self.assertTrue(callback_data.startswith("load:"), "❌ Callback data does not start with 'load:'")
+
+                # ✅ Now simulate CallbackQuery with this callback_data
+                load_message = type(
+                    "CallbackQuery",
+                    (),
+                    {"message": type("Message", (), {"chat": type("Chat", (), {"id": self.chat_id})}),
+                    "data": callback_data}
+                )
+                handle_load_choice(load_message)
+
+                # ✅ 🔥 UPDATE LOCAL STATE AFTER LOADING!
+                self.state = state_cache[self.chat_id]
+
+                # ✅ Check that the chapter switched back to 'inv_check'
                 self.assertEqual(self.state["chapter"], "inv_check")
 
-        print("✅ Test passed!")
+        print("✅ Test successfully passed!")
 
 
 if __name__ == "__main__":
