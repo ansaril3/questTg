@@ -215,7 +215,7 @@ def parse_chapter(chapter, usable_items, rest_data):
             if action["type"] == "text":
                 # Если это PLN, добавляем текст к текущему накопленному тексту
                 if current_text:
-                    current_text += " " + action["value"]
+                    current_text += "\n" + action["value"]
                 else:
                     current_text = action["value"]
             else:
