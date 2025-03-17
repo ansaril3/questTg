@@ -18,14 +18,14 @@ def send_instruction(chat_id):
     
     # ✅ If the mode is not "instruction", this is the first entry into the instruction
     if state.get("mode") != "instruction":
-        # Save the current chapter of the game in state["chapter"]
+        # Save the current chapter of the game in state["chapter"] - TBD
         state["instruction_chapter"] = list(instructions.keys())[0]  # Start with the first chapter
         state["mode"] = "instruction"
 
     chapter_key = state.get("instruction_chapter")
-    chapter = instructions.get(chapter_key)
+    instruction_chapter = instructions.get(chapter_key)
 
-    if not chapter:
+    if not instruction_chapter:
         bot.send_message(chat_id, "⚠️ Instruction not found.")
         return
     
@@ -36,11 +36,11 @@ def send_instruction(chat_id):
     state["options"] = {}
 
     # ✅ Execute all actions in the chapter
-    for action in chapter:
+    for action in instruction_chapter:
         execute_instruction_action(chat_id, state, action)
 
     # ✅ Show buttons
-    send_buttons(chat_id)
+    send_inline_buttons(chat_id)
 
 # ✅ Handle actions inside the instruction
 def execute_instruction_action(chat_id, state, action):
@@ -61,49 +61,48 @@ def execute_instruction_action(chat_id, state, action):
     elif action_type == "btn":
         state["options"][value["text"]] = value["target"]
 
-# ✅ Send buttons to the user
-def send_buttons(chat_id):
+# ✅ Send inline buttons to the user
+def send_inline_buttons(chat_id):
     state = state_cache.get(chat_id)
     if not state:
         return
     
-    markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
+    markup = types.InlineKeyboardMarkup(row_width=2)
 
     # ✅ Add buttons from state["options"]
     buttons = [
-        types.KeyboardButton(text) 
+        types.InlineKeyboardButton(text, callback_data=text)
         for text in state["options"].keys()
     ]
     for i in range(0, len(buttons), 2):
         markup.add(*buttons[i:i + 2])
 
     # ✅ Add "⬅️ Go back" button only if there is history
-    if state["history"]:
-        markup.add(types.KeyboardButton("⬅️ Go back"))
+    #if state["history"]:
+    markup.add(types.InlineKeyboardButton("⬅️ Go back", callback_data="go_back"))
 
-    # ✅ Send the new keyboard
+    # ✅ Send the new inline keyboard
     bot.send_message(chat_id, ".", reply_markup=markup)
 
-# ✅ Handle button presses inside the instruction
-def handle_instruction_action(chat_id, message_text):
+
+def handle_instruction_action(call):
+    chat_id = call.message.chat.id
     state = state_cache.get(chat_id)
     if not state:
         return
-    
-    target = state["options"].get(message_text)
 
-    if target == "return":
-        if state["mode"] == "instruction":
-            # ✅ Transition to the game mode
-            state["instruction_chapter"] = state["instruction_chapter"]  # Save the last instruction chapter
-            state["mode"] = "game"
-            from main import send_chapter
-            send_chapter(chat_id)  # Return to the game
-            return
-    
+    message_text = call.data
+    target = state["options"].get(message_text)
+    print(f"call.data = {call.data}")
+    if call.data == "go_back":
+        state["mode"] = "game"
+        from handlers.game_handler import send_chapter
+        send_chapter(chat_id)  # Return to the game
+        return
+        
     # ✅ If target corresponds to the next chapter in instructions.json
     if target in instructions:
         state["instruction_chapter"] = target
         send_instruction(chat_id)
     else:
-        bot.send_message(chat_id, "⚠️ Invalid choice. Please try again.")
+        bot.send_message(chat_id, "⚠️ Invalid choice instruction. Please try again.")

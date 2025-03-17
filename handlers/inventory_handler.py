@@ -3,10 +3,11 @@ from utils.state_manager import get_state, state_cache
 from handlers.game_handler import send_buttons, send_chapter
 import telebot.types as types
 
-# ✅ Inventory handling
-@bot.message_handler(func=lambda message: message.text == "🎒 Inventory")
-def show_inventory(message):
-    chat_id = message.chat.id
+
+# ✅ Показать инвентарь с Inline-кнопками
+@bot.callback_query_handler(func=lambda call: call.data == "🎒 Inventory")
+def show_inventory(call):
+    chat_id = call.message.chat.id
     state = get_state(chat_id)
 
     inventory_list = state.get("inventory", [])
@@ -18,45 +19,54 @@ def show_inventory(message):
         return
     
     message_text = "🎒 *Your inventory:*\n"
-    
+
     if gold > 0:
         message_text += f"💰 Gold: {gold}\n"
 
-    # ✅ Remove only inventory buttons from state["options"], leave the main scenario buttons
+    # ✅ Очищаем старые use_ кнопки
     state["options"] = {k: v for k, v in state["options"].items() if not k.startswith("Use ")}
+
+    # ✅ Создаем Inline-кнопки для предметов
+    markup = types.InlineKeyboardMarkup(row_width=2)
 
     for item in inventory_list:
         print(f"Inventory item: {item}")
         if "[usable]" in item:
             item_name = item.replace("[usable]", "").strip()
-            # ✅ Add a button for using the item to state["options"]
+            # ✅ Добавляем кнопку "Использовать"
             state["options"][f"Use {item_name}"] = f"use_{item_name}"
             message_text += f"🔹 {item_name} (✨ usable)\n"
+            markup.add(types.InlineKeyboardButton(f"Use {item_name}", callback_data=f"use_{item_name}"))
         else:
             message_text += f"🔹 {item}\n"
 
-    # ✅ Send the message with the inventory
-    bot.send_message(chat_id, f"\n{message_text}", parse_mode="Markdown")
+    # ✅ Кнопка возврата в игру
+    markup.add(types.InlineKeyboardButton("⬅️ Back", callback_data="back_to_game"))
 
-    # ✅ Send all buttons, including scenario and inventory buttons
-    send_buttons(chat_id)
+    # ✅ Показываем сообщение с кнопками
+    bot.send_message(chat_id, f"\n{message_text}", parse_mode="Markdown", reply_markup=markup)
 
 
-# ✅ Handling "Use" button press
-@bot.message_handler(func=lambda message: message.text.startswith("Use "))
-def handle_use_item(message):
-    chat_id = message.chat.id
+# ✅ Обработка нажатия "Use ..." кнопки
+@bot.callback_query_handler(func=lambda call: call.data.startswith("use_"))
+def handle_use_item(call):
+    chat_id = call.message.chat.id
     state = state_cache[chat_id]
 
-    # ✅ Get the item name
-    item_name = message.text.replace("Use ", "").strip()
-    use_chapter_key = f"use_{item_name}"
+    item_name = call.data.replace("use_", "").strip()
 
-    if use_chapter_key in chapters:
+    if call.data in chapters:
         if state["history"] and state["history"][-1] != state["chapter"]:
             state["history"].append(state["chapter"])
 
-        state["chapter"] = use_chapter_key
+        state["chapter"] = call.data
         send_chapter(chat_id)
     else:
-        bot.send_message(chat_id, f"⚠️ Chapter '{use_chapter_key}' not found.")
+        bot.send_message(chat_id, f"⚠️ Chapter '{call.data}' not found.")
+
+
+# ✅ Кнопка возврата в игру
+@bot.callback_query_handler(func=lambda call: call.data == "back_to_game")
+def back_to_game(call):
+    chat_id = call.message.chat.id
+    send_buttons(chat_id)

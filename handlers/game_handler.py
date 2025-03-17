@@ -10,7 +10,6 @@ from handlers.stats_handler import show_characteristics
 from utils.firebase_analytics import log_event
 from utils.error_handler import safe_handler
 
-
 # ✅ Start of the game
 @bot.message_handler(commands=['start'])
 @safe_handler
@@ -50,72 +49,14 @@ def send_chapter(chat_id):
             state["end_triggered"] = False
             break
 
-    send_buttons(chat_id)
+    send_buttons(chat_id)  # ⚙️ Используем новую inline версию
          
-@bot.message_handler(func=lambda message: message.text in get_all_options(message.chat.id))
-@safe_handler
-def handle_choice(message):
-    chat_id = message.chat.id
-    state = get_state(chat_id)
-
-    print(f"🔘 Button pressed: {message.text}")
-
-    target = state["options"].get(message.text)
-    actions = state["options"].get(f"{message.text}_actions")
-
-    if actions:
-        print(f"✅ Executing nested actions for {message.text}: {actions}")
-        for sub_action in actions:
-            execute_action(chat_id, state, sub_action)
-
-    # ✅ Handling buttons from COMMON_BUTTONS
-    if message.text == "📖 Instructions":
-        enter_instruction(message)
-        return
-    
-    # ✅ Checking "instruction" mode
-    if state.get("mode") == "instruction":
-        handle_instruction_action(chat_id, message.text)
-        return
-
-    if message.text == "📊 Characteristics":
-        show_characteristics(message)
-        return
-
-    if message.text == "🎒 Inventory":
-        from handlers.inventory_handler import show_inventory
-        show_inventory(message)
-        return
-
-    if message.text == "📥 Save game":
-        save_game(message)
-        return
-    
-    if message.text == "📤 Load game":
-        load_game(message)
-        return
-
-    if target == "return":
-        if state["history"]:
-            state["chapter"] = state["history"].pop()
-            send_chapter(chat_id)
-        else:
-            bot.send_message(chat_id, "⚠️ No previous chapter to return to.")
-        return
-
-    if target in chapters:
-        state["history"].append(state["chapter"])
-        state["chapter"] = target
-        send_chapter(chat_id)
-        return
-
-    bot.send_message(chat_id, "⚠️ Invalid choice. Try again.")
 
 # ✅ Action handlers
 def handle_text(chat_id, value):
     state = state_cache[chat_id]
     new_value = replace_variables_in_text(state, value)
-    bot.send_message(chat_id, new_value)
+    bot.send_message(chat_id, new_value, reply_markup=types.ReplyKeyboardRemove())
 
 
 def handle_inventory(state, value):
@@ -183,41 +124,42 @@ def handle_if(chat_id, state, value):
 
 
 # ✅ Instruction button handler
-@bot.message_handler(func=lambda message: message.text == "📖 Instructions")
-def enter_instruction(message):
-    chat_id = message.chat.id
+@bot.callback_query_handler(func=lambda call: call.data == "📖 Instructions")
+def enter_instruction(call):
+    chat_id = call.message.chat.id
     send_instruction(chat_id)
 
-# ✅ Back from instructions to the game handler
-@bot.message_handler(func=lambda message: message.text == "⬅️ Go back")
-def handle_back(message):
-    chat_id = message.chat.id
+
+@bot.callback_query_handler(func=lambda call: call.data == "⬅️ Go back")
+def handle_back(call):
+    print(f"------------------handle back instruction")
+    chat_id = call.message.chat.id
     state = get_state(chat_id)
 
     if state.get("mode") == "instruction":
         # ✅ Save instruction chapter and return to the game
-        state["instruction_chapter"] = state.get("instruction_chapter")
+        # state["instruction_chapter"] = state.get("instruction_chapter")
         state["mode"] = "game"
         send_chapter(chat_id)
     else:
         bot.send_message(chat_id, "⚠️ Cannot go back.")
 
 # ✅ Add state saving after actions are executed
-@bot.message_handler(func=lambda message: message.text == "📥 Save game")
-def save_game(message):
-    chat_id = message.chat.id
+@bot.callback_query_handler(func=lambda call: call.data == "📥 Save game")
+def save_game(call):
+    chat_id = call.message.chat.id
     state = get_state(chat_id)
 
     save_state(chat_id)
     last_save = state["saves"][-1]["name"]
-    bot.send_message(chat_id, f"✅ *Game saved:* `{last_save}`", parse_mode="Markdown")
 
-    buttons = [types.KeyboardButton(text) for text in state.get("options", {}).keys()]
-    send_buttons(chat_id)
+    # Возвращаемся к текущим кнопкам главы
+    send_buttons(chat_id, f"✅ Game saved: `{last_save}`")
 
-@bot.message_handler(func=lambda message: message.text == "📤 Load game")
-def load_game(message):
-    chat_id = message.chat.id
+
+@bot.callback_query_handler(func=lambda call: call.data == "📤 Load game")
+def load_game(call):
+    chat_id = call.message.chat.id
 
     save_file = f"{SAVES_DIR}/{chat_id}.json"
     if not os.path.exists(save_file):
@@ -227,18 +169,25 @@ def load_game(message):
     with open(save_file, "r", encoding="utf-8") as file:
         existing_data = json.load(file)
 
-    markup = types.ReplyKeyboardMarkup(row_width=1, one_time_keyboard=True)
+    # Создаем inline-клавиатуру для выбора сохранений
+    markup = types.InlineKeyboardMarkup(row_width=2)  # ✅ 2 в ряд
     for i, save_name in enumerate(sorted(existing_data.keys(), reverse=True)):
-        markup.add(types.KeyboardButton(f"Load {i + 1} ({save_name})"))
+        markup.add(types.InlineKeyboardButton(
+            f"Load {i + 1} ({save_name})",
+            callback_data=f"load_{i}"
+        ))
+
+    # Кнопка возврата
+    markup.add(types.InlineKeyboardButton("⬅️ Cancel", callback_data="cancel_load"))
 
     bot.send_message(chat_id, "🔄 *Select a save:*", reply_markup=markup, parse_mode="Markdown")
 
 
-@bot.message_handler(func=lambda message: message.text.startswith("Load "))
-def handle_load_choice(message):
-    chat_id = message.chat.id
+@bot.callback_query_handler(func=lambda call: call.data.startswith("load_"))
+def handle_load_choice(call):
+    chat_id = call.message.chat.id
     try:
-        save_index = int(message.text.split()[1]) - 1
+        save_index = int(call.data.split("_")[1])
 
         save_file = f"{SAVES_DIR}/{chat_id}.json"
         with open(save_file, "r", encoding="utf-8") as file:
@@ -247,7 +196,7 @@ def handle_load_choice(message):
             save_names = sorted(existing_data.keys(), reverse=True)
             selected_save = save_names[save_index]
 
-            # ✅ Load state through state_manager
+            # ✅ Загружаем состояние
             load_specific_state(chat_id, selected_save)
 
             bot.send_message(chat_id, f"✅ *Loaded save:* `{selected_save}`", parse_mode="Markdown")
@@ -257,33 +206,125 @@ def handle_load_choice(message):
         print(f"⚠️ Error during save selection: {e}")
         bot.send_message(chat_id, "⚠️ *Save selection error.*", parse_mode="Markdown")
 
-# ✅ Sending buttons directly from options
-def send_buttons(chat_id):
+@bot.callback_query_handler(func=lambda call: call.data == "cancel_load")
+def cancel_load(call):
+    chat_id = call.message.chat.id
+    bot.send_message(chat_id, "❌ Load cancelled.")
+    send_buttons(chat_id)  # Вернуть текущие игровые кнопки
+
+def handle_donate(call):
+    chat_id = call.message.chat.id
+    # Пример ссылки для донатов
+    donation_url = "https://www.donate.com/yourpage"  # Замените на свой URL донатов
+    send_buttons(
+        chat_id,
+        "💰 Thank you for considering a donation! You can support us here:\n\n" + donation_url)
+
+# ✅ Sending inline buttons directly from options
+def send_buttons(chat_id, text="."):
     state = state_cache.get(chat_id)
     if not state:
         return
     
-    # ✅ Create layout
-    markup = types.ReplyKeyboardMarkup(row_width=2, one_time_keyboard=True)
+    # ✅ Create inline keyboard layout
+    markup = types.InlineKeyboardMarkup(row_width=2)
 
     # ✅ Add only real buttons (without _actions)
     dynamic_buttons = [
-        types.KeyboardButton(text) 
+        types.InlineKeyboardButton(text=text, callback_data=text)
         for text in state.get("options", {}).keys()
         if not text.endswith("_actions")  # 🚀 Ignore action buttons
     ]
+
+    # ✅ Add to markup
     for i in range(0, len(dynamic_buttons), 2):
-        markup.add(*dynamic_buttons[i:i + 2])
+        markup.row(*dynamic_buttons[i:i + 2])
 
-    # ✅ Add common buttons to the interface (without saving in state)
-    common_buttons = [types.KeyboardButton(text) for text in COMMON_BUTTONS]
+    # ✅ Add common buttons (внизу под основными)
+    common_buttons = [
+        types.InlineKeyboardButton(text=text, callback_data=text)
+        for text in COMMON_BUTTONS
+    ]
     for i in range(0, len(common_buttons), 2):
-        markup.add(*common_buttons[i:i + 2])
+        markup.row(*common_buttons[i:i + 2])
 
-    print(f"📌 Sending buttons: {list(state['options'].keys())}")
+    print(f"📌 Sending inline buttons: {list(state['options'].keys()) + COMMON_BUTTONS}")
 
-    # ✅ Send the new keyboard
-    bot.send_message(chat_id, ".", reply_markup=markup)
+    # ✅ Send keyboard
+    bot.send_message(chat_id, text, reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: True)
+@safe_handler
+def handle_inline_choice(call):
+    chat_id = call.message.chat.id
+    message_text = call.data
+    state = get_state(chat_id)
+
+    print(f"🔘 Inline button pressed: {message_text}")
+
+    target = state["options"].get(message_text)
+    actions = state["options"].get(f"{message_text}_actions")
+
+    if actions:
+        print(f"✅ Executing nested actions for {message_text}: {actions}")
+        for sub_action in actions:
+            execute_action(chat_id, state, sub_action)
+
+    # ✅ Handling buttons from COMMON_BUTTONS
+    if message_text == "📖 Instructions":
+        enter_instruction(call)
+        return
+
+    if state.get("mode") == "instruction":
+        handle_instruction_action(call)
+        return
+    
+    if message_text == "💰 Donate":
+        handle_donate(call)
+        return
+
+    if message_text == "📊 Characteristics":
+        show_characteristics(call)
+        return
+
+    if message_text == "🎒 Inventory":
+        from handlers.inventory_handler import show_inventory
+        show_inventory(call)
+        return
+    
+    if call.data.startswith("use_"):
+        from handlers.inventory_handler import handle_use_item
+        handle_use_item(call)
+        return
+    
+    if message_text == "back_to_game":
+        from handlers.inventory_handler import back_to_game
+        back_to_game(call)
+        return
+
+    if message_text == "📥 Save game":
+        save_game(call)
+        return
+    
+    if message_text == "📤 Load game":
+        load_game(call)
+        return
+
+    if target == "return":
+        if state["history"]:
+            state["chapter"] = state["history"].pop()
+            send_chapter(chat_id)
+        else:
+            bot.send_message(chat_id, "⚠️ No previous chapter to return to.")
+        return
+
+    if target in chapters:
+        state["history"].append(state["chapter"])
+        state["chapter"] = target
+        send_chapter(chat_id)
+        return
+
+    bot.send_message(chat_id, "⚠️ Invalid choice. Try again.")
 
 
 # ✅ Simplify action handling
@@ -336,10 +377,4 @@ def get_all_options(chat_id):
 
     return options
 
-# ✅ Add log of buttons after actions are executed in handle_choice
-@bot.message_handler(func=lambda message: True)
-def log_buttons(message):
-    chat_id = message.chat.id
-    state = get_state(chat_id)
-    buttons = list(state.get("options", {}).keys())
-    print(f"✅ Current buttons: {buttons}")
+

@@ -2,9 +2,9 @@ from config import bot
 from utils.state_manager import state_cache
 import telebot.types as types
 
-@bot.message_handler(func=lambda message: message.text == "📊 Characteristics")
-def show_characteristics(message):
-    chat_id = message.chat.id
+@bot.callback_query_handler(func=lambda call: call.data == "📊 Characteristics")
+def show_characteristics(call):
+    chat_id = call.message.chat.id
 
     if not isinstance(chat_id, int):
         print(f"⚠️ Error: chat_id should be an integer, not {type(chat_id)}")
@@ -32,7 +32,7 @@ def show_characteristics(message):
         value = char.get('value', 0)
         message_text += f"🔹 {name}: {value}\n"
 
-    bot.send_message(chat_id, message_text, parse_mode="Markdown")
+    #bot.send_message(chat_id, message_text, parse_mode="Markdown")
 
     from handlers.game_handler import send_buttons
-    send_buttons(chat_id)  # ✅ Show menu without duplicating buttons
+    send_buttons(chat_id, message_text)  # ✅ Show menu without duplicating buttons
