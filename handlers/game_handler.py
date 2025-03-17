@@ -221,7 +221,7 @@ def handle_donate(call):
         "💰 Thank you for considering a donation! You can support us here:\n\n" + donation_url)
 
 # ✅ Sending inline buttons directly from options
-def send_buttons(chat_id, text="."):
+def send_buttons(chat_id, text="➡️"):
     state = state_cache.get(chat_id)
     if not state:
         return
