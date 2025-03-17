@@ -2,7 +2,7 @@ import unittest
 import json, subprocess
 from unittest.mock import MagicMock, patch
 from config import TOKEN, CHAPTERS_FILE
-from handlers.game_handler import handle_choice, send_chapter
+from handlers.game_handler import handle_inline_choice, send_chapter
 from utils.state_manager import load_state, save_state, state_cache
 import telebot
 import sys, os
@@ -36,6 +36,13 @@ class TestBotSequential(unittest.TestCase):
         self.chat_id = 123456789  # Test ID
         self.errors = []  # List of errors
 
+    def simulate_inline(self, data):
+        """Simulate pressing inline button (callback_query)"""
+        return type("CallbackQuery", (), {
+            "message": type("Message", (), {"chat": type("Chat", (), {"id": self.chat_id})}),
+            "data": data
+        })
+    
     def send_message_and_check(self, message_text, current_chapter):
         """Simulate button press and check"""
         message = type(
@@ -49,7 +56,8 @@ class TestBotSequential(unittest.TestCase):
                  patch("telebot.TeleBot.send_document", new=MagicMock()), \
                  patch("telebot.TeleBot.send_video", new=MagicMock()), \
                  patch("telebot.TeleBot.send_audio", new=MagicMock()):
-                handle_choice(message)  # Simulate the press
+                query = self.simulate_inline("🔥 Secret Path")
+                handle_inline_choice(message)
             return True
         except Exception as e:
             error_msg = f"❌ Error in chapter '{current_chapter}' when pressing '{message_text}': {e}"
