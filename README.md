@@ -17,7 +17,7 @@
 
 ---
 
-## 🚀 Installation and Deployment on a Remote Server (Linux, VPS, SSH)
+## 🚀 Installation and Deployment
 
 ### 1. 📥 Clone the repository
 
@@ -63,9 +63,9 @@ nano .env
 Example content:
 
 ```ini
-TOKEN=your_telegram_bot_token
-MEASUREMENT_ID=your_google_analytics_id
-API_SECRET=your_google_api_secret
+TOKEN=your_telegram_bot_token # get from BotFather
+MEASUREMENT_ID=your_google_analytics_id #for google Analytics
+API_SECRET=your_google_api_secret #for google Analytics
 ```
 
 > ⚠️ **Note**: Never share your `.env` file publicly.
@@ -81,20 +81,23 @@ python bot.py
 
 ---
 
-## 💡 Optional: Run in Background Using `screen`
+## 💡 Optional: Run in Background Using `tmux`
 
 To keep the bot running after disconnecting from SSH:
 
 ```bash
-sudo apt install screen
-screen -S bot_session
+sudo apt install tmux
+tmux new -s bot_session
 python bot.py
+```
+To disconnect from session:   
+```bash
+Ctrl + B, next D
 ```
 
 To reattach to the session later:
-
 ```bash
-screen -r bot_session
+tmux attach -t bot_session
 ```
 
 ---
@@ -173,6 +176,7 @@ End
 
 > ⚠️ **Note:** If some lines were not parsed correctly, they will be saved to `data/rest.txt` for manual review.
 
+If you want to import non-URQ quest, write me to expand parser.  
 ---
 
 ### 2. Test Your Quest Automatically
