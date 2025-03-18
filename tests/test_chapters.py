@@ -45,19 +45,14 @@ class TestBotSequential(unittest.TestCase):
     
     def send_message_and_check(self, message_text, current_chapter):
         """Simulate button press and check"""
-        message = type(
-            "Message",
-            (),
-            {"chat": type("Chat", (), {"id": self.chat_id}), "text": message_text},
-        )
         try:
             with patch("telebot.TeleBot.send_message", new=MagicMock()), \
                  patch("telebot.TeleBot.send_photo", new=MagicMock()), \
                  patch("telebot.TeleBot.send_document", new=MagicMock()), \
                  patch("telebot.TeleBot.send_video", new=MagicMock()), \
                  patch("telebot.TeleBot.send_audio", new=MagicMock()):
-                query = self.simulate_inline("🔥 Secret Path")
-                handle_inline_choice(message)
+                query = self.simulate_inline(message_text)
+                handle_inline_choice(query)
             return True
         except Exception as e:
             error_msg = f"❌ Error in chapter '{current_chapter}' when pressing '{message_text}': {e}"
