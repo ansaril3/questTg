@@ -1,5 +1,5 @@
 
-# QuestTG — Telegram Text Quest Interpreter Bot
+# QuestTG — Telegram Interactive Fiction Bot (Text Quests)
 
 **QuestTG** is a Telegram bot for interactive text-based quests.  
 ⚙️ This is a Python implementation of [PolyQuest](https://github.com/PolyQuest/PolyQuest.github.io) which is based on [URQW](https://github.com/urqw/UrqW) language.  
