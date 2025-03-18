@@ -144,14 +144,12 @@ def handle_back(call):
     else:
         bot.send_message(chat_id, "⚠️ Cannot go back.")
 
-# ✅ Add state saving after actions are executed
 @bot.callback_query_handler(func=lambda call: call.data == "📥 Save game")
 def save_game(call):
     chat_id = call.message.chat.id
-    state = get_state(chat_id)
 
-    save_state(chat_id)
-    last_save = state["saves"][-1]["name"]
+    save_state(chat_id)  # ✅ Сохраняем текущее состояние
+    last_save = sorted(get_saved_states(chat_id))[-1]  # Берем последнее сохранение
 
     # Возвращаемся к текущим кнопкам главы
     send_buttons(chat_id, f"✅ Game saved: `{last_save}`")
@@ -169,9 +167,10 @@ def load_game(call):
     with open(save_file, "r", encoding="utf-8") as file:
         existing_data = json.load(file)
 
-    # Создаем inline-клавиатуру для выбора сохранений
+    # ✅ Создаем inline-клавиатуру для выбора сохранений (только ключи верхнего уровня)
+    save_names = sorted(existing_data.keys(), reverse=True)
     markup = types.InlineKeyboardMarkup(row_width=2)  # ✅ 2 в ряд
-    for i, save_name in enumerate(sorted(existing_data.keys(), reverse=True)):
+    for i, save_name in enumerate(save_names):
         markup.add(types.InlineKeyboardButton(
             f"Load {i + 1} ({save_name})",
             callback_data=f"load_{i}"
@@ -193,18 +192,28 @@ def handle_load_choice(call):
         with open(save_file, "r", encoding="utf-8") as file:
             existing_data = json.load(file)
 
-            save_names = sorted(existing_data.keys(), reverse=True)
-            selected_save = save_names[save_index]
+        save_names = sorted(existing_data.keys(), reverse=True)
+        selected_save = save_names[save_index]
 
-            # ✅ Загружаем состояние
-            load_specific_state(chat_id, selected_save)
+        # ✅ Загружаем состояние
+        load_specific_state(chat_id, selected_save)
 
-            bot.send_message(chat_id, f"✅ *Loaded save:* `{selected_save}`", parse_mode="Markdown")
-            send_chapter(chat_id)
+        bot.send_message(chat_id, f"✅ *Loaded save:* `{selected_save}`", parse_mode="Markdown")
+        send_chapter(chat_id)
 
     except (ValueError, IndexError) as e:
         print(f"⚠️ Error during save selection: {e}")
         bot.send_message(chat_id, "⚠️ *Save selection error.*", parse_mode="Markdown")
+
+
+def get_saved_states(chat_id):
+    """Получает список сохранений (только верхние ключи JSON)"""
+    save_file = f"{SAVES_DIR}/{chat_id}.json"
+    if not os.path.exists(save_file):
+        return []
+    
+    with open(save_file, "r", encoding="utf-8") as file:
+        return sorted(json.load(file).keys(), reverse=True)  # Сортируем от новых к старым
 
 @bot.callback_query_handler(func=lambda call: call.data == "cancel_load")
 def cancel_load(call):
