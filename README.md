@@ -176,7 +176,8 @@ End
 
 > ⚠️ **Note:** If some lines were not parsed correctly, they will be saved to `data/rest.txt` for manual review.
 
-If you want to import non-URQ quest, write me to expand parser.  
+If you want to import non-URQ quest, write me to expand parser.
+
 ---
 
 ### 2. Test Your Quest Automatically
