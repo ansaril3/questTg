@@ -53,22 +53,7 @@ def send_chapter(chat_id):
     # Формирование message_text
     inventory_list = state.get("inventory", [])
     gold = state.get("gold", 0)
-    characteristics = state.get("characteristics", {})
     message_text = ""
-
-    # Добавляем характеристики
-    if characteristics:  # Проверяем, не пустой ли словарь характеристик
-        message_text += "📊 "
-        for char_key, char_data in characteristics.items():
-            char_name = char_data.get("name", "")
-            char_value = char_data.get("value", 0)
-            
-            # Проверяем, содержит ли name суффикс [main]
-            if "[main]" in char_name:
-                # Убираем суффикс [main] из имени
-                char_name_cleaned = char_name.replace(" [main]", "")
-                message_text += f"{char_name_cleaned}: {char_value} "
-        message_text += "\n"
     
     # Добавляем золото
     if gold > 0:
