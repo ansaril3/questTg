@@ -1,7 +1,7 @@
 import unittest
 import json, subprocess
 from unittest.mock import MagicMock, patch
-from config import TOKEN, CHAPTERS_FILE
+from config import config
 from handlers.game_handler import handle_inline_choice, send_chapter
 from utils.state_manager import load_state, save_state, state_cache
 import telebot
@@ -13,12 +13,12 @@ subprocess.run("find . -name '__pycache__' -exec rm -rf {} +", shell=True)
 print("🗑️ All __pycache__ folders have been deleted")
 
 # Load chapters
-with open(CHAPTERS_FILE, "r", encoding="utf-8") as file:
+with open(config.CHAPTERS_FILE, "r", encoding="utf-8") as file:
     chapters = json.load(file)
-    print(f"📖 Loaded {len(chapters)} chapters from {CHAPTERS_FILE}")
+    print(f"📖 Loaded {len(chapters)} chapters from {config.CHAPTERS_FILE}")
 
 # Create the bot (disable real Telegram API)
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(config.TOKEN)
 
 # Globally mock all Telegram message sending functions
 bot.send_message = MagicMock()

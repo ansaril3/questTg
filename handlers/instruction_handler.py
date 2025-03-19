@@ -1,11 +1,11 @@
 import os
 import json
-from config import bot, DATA_DIR
+from config import bot, config
 import telebot.types as types
 from utils.state_manager import state_cache
 
 # ✅ Load instructions.json
-INSTRUCTIONS_FILE = os.path.join(DATA_DIR, "instructions.json")
+INSTRUCTIONS_FILE = os.path.join(config.DATA_DIR, "instructions.json")
 
 with open(INSTRUCTIONS_FILE, "r", encoding="utf-8") as f:
     instructions = json.load(f)
@@ -51,7 +51,7 @@ def execute_instruction_action(chat_id, state, action):
         bot.send_message(chat_id, value)
     
     elif action_type == "image":
-        image_path = DATA_DIR + value.replace("\\", "/")
+        image_path = config.DATA_DIR + value.replace("\\", "/")
         if os.path.exists(image_path):
             with open(image_path, "rb") as photo:
                 bot.send_photo(chat_id, photo)

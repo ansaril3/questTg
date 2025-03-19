@@ -1,4 +1,4 @@
-from config import MEASUREMENT_ID, API_SECRET
+from config import config
 import requests
 import time
 
@@ -10,7 +10,7 @@ def log_event(user_id: int, event_name: str, params: dict = None):
         }
 
     # URL для Measurement Protocol
-    url = f"https://www.google-analytics.com/mp/collect?measurement_id={MEASUREMENT_ID}&api_secret={API_SECRET}"
+    url = f"https://www.google-analytics.com/mp/collect?measurement_id={config.MEASUREMENT_ID}&api_secret={config.API_SECRET}"
 
     # Тело запроса
     payload = {

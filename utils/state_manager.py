@@ -1,7 +1,7 @@
 import json
 import os
 from collections import deque
-from config import SAVES_DIR, SAVES_LIMIT, HISTORY_LIMIT, first_chapter
+from config import config
 from datetime import datetime
 
 # ✅ State cache in memory
@@ -12,19 +12,19 @@ def get_state(user_id):
     if user_id not in state_cache:
         # print(f"⚠️ State for user {user_id} not found — creating a new state.")
         state_cache[user_id] = {
-            "chapter": first_chapter,
+            "chapter": config.first_chapter,
             "instruction": None,
             "inventory": [],
             "gold": 0,
             "characteristics": {},
             "options": {},
-            "history": deque([], maxlen=HISTORY_LIMIT)
+            "history": deque([], maxlen=config.HISTORY_LIMIT)
         }
     return state_cache[user_id]
 
 # ✅ Save the current state to a shared JSON file (by save name)
 def save_state(user_id):
-    save_file = f"{SAVES_DIR}/{user_id}.json"
+    save_file = f"{config.SAVES_DIR}/{user_id}.json"
 
     # ✅ Load existing saves from the file (if any)
     if os.path.exists(save_file):
@@ -42,7 +42,7 @@ def save_state(user_id):
     existing_data[save_name] = state
 
     # ✅ Limit the number of saves in the file
-    while len(existing_data) > SAVES_LIMIT:
+    while len(existing_data) > config.SAVES_LIMIT:
         oldest_key = sorted(existing_data.keys())[0]
         del existing_data[oldest_key]
 
@@ -54,7 +54,7 @@ def save_state(user_id):
 
 # ✅ Load the last save from the JSON file into the cache
 def load_state(user_id):
-    save_file = f"{SAVES_DIR}/{user_id}.json"
+    save_file = f"{config.SAVES_DIR}/{user_id}.json"
 
     if os.path.exists(save_file):
         with open(save_file, "r", encoding="utf-8") as file:
@@ -68,7 +68,7 @@ def load_state(user_id):
             state = existing_data[last_key]
 
             # ✅ Convert to deque for efficient operations
-            state["history"] = deque(state.get("history", []), maxlen=HISTORY_LIMIT)
+            state["history"] = deque(state.get("history", []), maxlen=config.HISTORY_LIMIT)
 
             # ✅ Load into the cache
             state_cache[user_id] = state
@@ -80,7 +80,7 @@ def load_state(user_id):
 
 # ✅ Load a specific save by its name
 def load_specific_state(user_id, save_name):
-    save_file = f"{SAVES_DIR}/{user_id}.json"
+    save_file = f"{config.SAVES_DIR}/{user_id}.json"
 
     if os.path.exists(save_file):
         with open(save_file, "r", encoding="utf-8") as file:
@@ -88,7 +88,7 @@ def load_specific_state(user_id, save_name):
 
             if save_name in existing_data:
                 state = existing_data[save_name]
-                state["history"] = deque(state.get("history", []), maxlen=HISTORY_LIMIT)
+                state["history"] = deque(state.get("history", []), maxlen=config.HISTORY_LIMIT)
 
                 # ✅ Load into the cache
                 state_cache[user_id] = state

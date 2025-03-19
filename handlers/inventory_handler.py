@@ -1,4 +1,4 @@
-from config import bot, chapters
+from config import bot, config
 from utils.state_manager import get_state, state_cache
 from handlers.game_handler import send_buttons, send_chapter
 import telebot.types as types
@@ -55,7 +55,7 @@ def handle_use_item(call):
 
     item_name = call.data.replace("use_", "").strip()
 
-    if call.data in chapters:
+    if call.data in config.chapters:
         if state["history"] and state["history"][-1] != state["chapter"]:
             state["history"].append(state["chapter"])
 

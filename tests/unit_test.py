@@ -1,7 +1,7 @@
 import unittest
 import json
 from unittest.mock import MagicMock, patch
-from config import bot, CHAPTERS_FILE, COMMON_BUTTONS, SAVES_DIR
+from config import bot, config
 from handlers.game_handler import handle_inline_choice, enter_instruction, handle_back, send_chapter, execute_action, save_game, load_game, handle_load_choice
 from handlers.inventory_handler import show_inventory, handle_use_item
 from utils.state_manager import get_state, save_state, load_specific_state, state_cache
@@ -14,9 +14,9 @@ subprocess.run("find . -name '__pycache__' -exec rm -rf {} +", shell=True)
 print("🗑️ All __pycache__ folders have been deleted")
 
 # Load test chapters
-CHAPTERS_FILE = "tests/test_chapters.json"
-print(f"📂 Opening JSON: {CHAPTERS_FILE}")
-with open(CHAPTERS_FILE, "r", encoding="utf-8") as file:
+TEST_CHAPTERS_FILE = "tests/test_chapters.json"
+print(f"📂 Opening JSON: {TEST_CHAPTERS_FILE}")
+with open(TEST_CHAPTERS_FILE, "r", encoding="utf-8") as file:
     test_chapters = json.load(file)
 print(f"✅ Chapters loaded: {list(test_chapters.keys())}")
 
@@ -49,7 +49,7 @@ class TestBotActions(unittest.TestCase):
 
     def test_xbtn(self):
         print("➡️ Running test_xbtn")
-        with patch("handlers.game_handler.chapters", test_chapters):
+        with patch("handlers.game_handler.config.chapters", test_chapters):
             action = {
                 "type": "xbtn",
                 "value": {
@@ -83,7 +83,7 @@ class TestBotActions(unittest.TestCase):
 
     def test_end(self):
         print("➡️ Running test_end")
-        with patch("handlers.game_handler.chapters", test_chapters):
+        with patch("handlers.game_handler.config.chapters", test_chapters):
             # ✅ Устанавливаем главу "test_end"
             self.state["chapter"] = "test_end"
             self.state["characteristics"] = {}
@@ -99,7 +99,7 @@ class TestBotActions(unittest.TestCase):
 
     def test_btn(self):
         print("➡️ Running test_btn")
-        with patch("handlers.game_handler.chapters", test_chapters):
+        with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 action = {
                     "type": "btn",
@@ -127,7 +127,7 @@ class TestBotActions(unittest.TestCase):
 
     def test_image(self):
         print("➡️ Running test_image")
-        with patch("handlers.game_handler.chapters", test_chapters):
+        with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_photo") as mock_send_photo:
                 # ✅ Устанавливаем главу "test_image"
                 self.state["chapter"] = "test_image"
@@ -164,7 +164,7 @@ class TestBotActions(unittest.TestCase):
                 }
             ]
         }
-        with patch("handlers.game_handler.chapters", test_chapters):
+        with patch("handlers.game_handler.config.chapters", test_chapters):
             # ✅ Устанавливаем начальное состояние
             self.state["chapter"] = "test_start"
             self.state["history"].append("test_start")
@@ -184,7 +184,7 @@ class TestBotActions(unittest.TestCase):
 
     def test_gold(self):
         print("➡️ Running test_gold")
-        with patch("handlers.game_handler.chapters", test_chapters):
+        with patch("handlers.game_handler.config.chapters", test_chapters):
             self.state["gold"] = 0
             
             actions = test_chapters["test_secret"]
@@ -196,7 +196,7 @@ class TestBotActions(unittest.TestCase):
 
     def test_condition(self):
         print("➡️ Running test_condition")
-        with patch("handlers.game_handler.chapters", test_chapters):
+        with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 self.state["chapter"] = "test_start"
                 send_chapter(self.chat_id)
@@ -210,7 +210,7 @@ class TestBotActions(unittest.TestCase):
 
     def test_assign_characteristics(self):
         print("➡️ Running test_characteristics")
-        with patch("handlers.game_handler.chapters", test_chapters):
+        with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 action = test_chapters["test_end"][0]
                 execute_action(self.chat_id, self.state, action)
@@ -231,7 +231,7 @@ class TestBotActions(unittest.TestCase):
 
     def test_inventory(self):
         print("➡️ Running test_inventory")
-        with patch("handlers.game_handler.chapters", test_chapters):
+        with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 self.state["inventory"] = ["vial of magic potion[usable]"]
                 self.state["options"]["🎒 Inventory"] = "🎒 Inventory"
@@ -269,7 +269,7 @@ class TestBotActions(unittest.TestCase):
         """✅ Test saving and loading game"""
         print("➡️ Running test_save_and_load")
 
-        with patch("handlers.game_handler.chapters", test_chapters):
+        with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
 
                 # ✅ Очистка состояния перед тестом
@@ -291,7 +291,7 @@ class TestBotActions(unittest.TestCase):
                 print(f"Game saved: {actual_args[1]}")
                 print(f"Chapter : {self.state["chapter"]}")
                 # ✅ Получаем название последнего сохранения
-                save_file = f"{SAVES_DIR}/{self.chat_id}.json"
+                save_file = f"{config.SAVES_DIR}/{self.chat_id}.json"
                 with open(save_file, "r", encoding="utf-8") as file:
                     existing_data = json.load(file)
                     last_save_name = sorted(existing_data.keys(), reverse=True)[0]
@@ -321,7 +321,7 @@ class TestBotActions(unittest.TestCase):
 
     def test_instruction_navigation(self):
         print("➡️ Running test_instruction_navigation")
-        with patch("handlers.game_handler.chapters", test_chapters):
+        with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 # ✅ Устанавливаем главу "test_game_ch"
                 self.state["chapter"] = "test_game_ch"

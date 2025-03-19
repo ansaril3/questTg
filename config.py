@@ -1,52 +1,78 @@
-# Configuration and data loading
-
+from dataclasses import dataclass, field
 import os
 import json
 from dotenv import load_dotenv
 from telebot import TeleBot
 
-# Loading environment variables
+# Загрузка переменных окружения
 load_dotenv()
-TOKEN = os.getenv("TOKEN")
-FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID")  # Create Firebase project -> Settings 
-MEASUREMENT_ID = os.getenv("MEASUREMENT_ID")  # ⚙️ Find it in Firebase > Analytics > Data Streams
-API_SECRET = os.getenv("API_SECRET")  # ⚙️ Create in Measurement Protocol API (Google Analytics 4)
 
-bot = TeleBot(TOKEN)
+@dataclass
+class Config:
+    # Переменные окружения
+    TOKEN: str = os.getenv("TOKEN")
+    FIREBASE_PROJECT_ID: str = os.getenv("FIREBASE_PROJECT_ID")
+    MEASUREMENT_ID: str = os.getenv("MEASUREMENT_ID")
+    API_SECRET: str = os.getenv("API_SECRET")
+    PROVIDER_TOKEN: str = os.getenv("PROVIDER_TOKEN")
+    TEST_PROVIDER_TOKEN: str = os.getenv("TEST_PROVIDER_TOKEN")
 
-# ✅ Prod mode (0 — test mode turn off firebase, 1 — production mode)
-PROD_MODE = 1
+    # Настройки платежей
+    CURRENCY: str = "RUB"
+    PRICE: str = "9900"
 
-CHAPTERS_FILE = "data/chapters.json" 
-INSTRUCTIONS_FILE = "data/instructions.json"
-SAVES_DIR = "saves"
-DATA_DIR = "data"
-HISTORY_LIMIT = 10
-SAVES_LIMIT = 5
-COMMON_BUTTONS = [
-    "📥 Save game",
-    "📤 Load game",
-    "📊 Characteristics",
-    "🎒 Inventory",
-    "📖 Instructions"
-    #"💰 Donate" 
-]
-HISTORY_LIMIT = 10
+    # Режим работы (0 — тестовый, 1 — продакшн)
+    PROD_MODE: int = 0
 
-# Create the saves directory if it doesn't exist
-if not os.path.exists(SAVES_DIR):
-    os.makedirs(SAVES_DIR)
+    # Пути к файлам и директориям
+    CHAPTERS_FILE: str = "data/chapters.json"
+    INSTRUCTIONS_FILE: str = "data/instructions.json"
+    SAVES_DIR: str = "saves"
+    DATA_DIR: str = "data"
 
-# Function to load a JSON file
-def load_json(file_path):
-    if os.path.exists(file_path):
-        with open(file_path, "r", encoding="utf-8") as file:
-            return json.load(file)
-    return {}
+    # Лимиты
+    HISTORY_LIMIT: int = 10
+    SAVES_LIMIT: int = 5
 
-# Loading data
-chapters = load_json(CHAPTERS_FILE)
-instructions = load_json(INSTRUCTIONS_FILE)
+    # Кнопки
+    COMMON_BUTTONS: list = field(default_factory=lambda: [
+        "📥 Save game",
+        "📤 Load game",
+        "📊 Characteristics",
+        "🎒 Inventory",
+        "📖 Instructions"
+    ])
 
-first_chapter = list(chapters.keys())[0] if chapters else None
-first_instruction = list(instructions.keys())[0] if instructions else None
+    # Данные, загруженные из JSON
+    chapters: dict = field(default_factory=dict)
+    instructions: dict = field(default_factory=dict)
+
+    # Первые главы и инструкции
+    first_chapter: str = None
+    first_instruction: str = None
+
+    def __post_init__(self):
+        # Создание директории для сохранений, если её нет
+        if not os.path.exists(self.SAVES_DIR):
+            os.makedirs(self.SAVES_DIR)
+
+        # Загрузка данных из JSON
+        self.chapters = self.load_json(self.CHAPTERS_FILE)
+        self.instructions = self.load_json(self.INSTRUCTIONS_FILE)
+
+        # Определение первой главы и инструкции
+        self.first_chapter = list(self.chapters.keys())[0] if self.chapters else None
+        self.first_instruction = list(self.instructions.keys())[0] if self.instructions else None
+
+    @staticmethod
+    def load_json(file_path):
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as file:
+                return json.load(file)
+        return {}
+
+# Создание объекта конфигурации
+config = Config()
+
+# Создание объекта бота отдельно
+bot = TeleBot(config.TOKEN)

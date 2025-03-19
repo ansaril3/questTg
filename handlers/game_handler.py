@@ -1,4 +1,4 @@
-from config import bot, chapters, COMMON_BUTTONS, DATA_DIR, SAVES_DIR, PROD_MODE
+from config import config, bot
 from utils.state_manager import load_specific_state, save_state, get_state, state_cache  
 from utils.helpers import process_inventory_action, replace_variables_in_text, evaluate_condition
 from handlers.instruction_handler import send_instruction, handle_instruction_action
@@ -28,9 +28,9 @@ def send_chapter(chat_id):
         return
     
     chapter_key = state["chapter"]
-    chapter = chapters.get(chapter_key)
+    chapter = config.chapters.get(chapter_key)
     print(f"------------------------CHAPTER: {chapter_key}")
-    if PROD_MODE == 1:
+    if config.PROD_MODE == 1:
         log_event(chat_id, "chapter_opened", {"chapter": chapter_key})
     
     if not chapter:
@@ -95,13 +95,13 @@ def handle_goto(chat_id, state, value):
             send_chapter(chat_id)
         return
     
-    if value in chapters:
+    if value in config.chapters:
         state["history"].append(state["chapter"])
         state["chapter"] = value
         send_chapter(chat_id)
 
 def handle_image(chat_id, value):
-    image_path = DATA_DIR + value.replace("\\", "/")
+    image_path = config.DATA_DIR + value.replace("\\", "/")
     if os.path.exists(image_path):
         with open(image_path, "rb") as photo:
             bot.send_photo(chat_id, photo)
@@ -159,7 +159,7 @@ def save_game(call):
 def load_game(call):
     chat_id = call.message.chat.id
 
-    save_file = f"{SAVES_DIR}/{chat_id}.json"
+    save_file = f"{config.SAVES_DIR}/{chat_id}.json"
     if not os.path.exists(save_file):
         bot.send_message(chat_id, "⚠️ *No available saves!*", parse_mode="Markdown")
         return
@@ -188,7 +188,7 @@ def handle_load_choice(call):
     try:
         save_index = int(call.data.split("_")[1])
 
-        save_file = f"{SAVES_DIR}/{chat_id}.json"
+        save_file = f"{config.SAVES_DIR}/{chat_id}.json"
         with open(save_file, "r", encoding="utf-8") as file:
             existing_data = json.load(file)
 
@@ -208,7 +208,7 @@ def handle_load_choice(call):
 
 def get_saved_states(chat_id):
     """Получает список сохранений (только верхние ключи JSON)"""
-    save_file = f"{SAVES_DIR}/{chat_id}.json"
+    save_file = f"{config.SAVES_DIR}/{chat_id}.json"
     if not os.path.exists(save_file):
         return []
     
@@ -252,12 +252,12 @@ def send_buttons(chat_id, text="➡️"):
     # ✅ Add common buttons (внизу под основными)
     common_buttons = [
         types.InlineKeyboardButton(text=text, callback_data=text)
-        for text in COMMON_BUTTONS
+        for text in config.COMMON_BUTTONS
     ]
     for i in range(0, len(common_buttons), 2):
         markup.row(*common_buttons[i:i + 2])
 
-    print(f"📌 Sending inline buttons: {list(state['options'].keys()) + COMMON_BUTTONS}")
+    print(f"📌 Sending inline buttons: {list(state['options'].keys()) + config.COMMON_BUTTONS}")
 
     # ✅ Send keyboard
     bot.send_message(chat_id, text, reply_markup=markup)
@@ -327,7 +327,7 @@ def handle_inline_choice(call):
             bot.send_message(chat_id, "⚠️ No previous chapter to return to.")
         return
 
-    if target in chapters:
+    if target in config.chapters:
         state["history"].append(state["chapter"])
         state["chapter"] = target
         send_chapter(chat_id)
@@ -382,7 +382,7 @@ def get_all_options(chat_id):
     options = set(state.get("options", {}).keys())
 
     # ✅ Add common buttons from the shared variable
-    options.update(COMMON_BUTTONS)
+    options.update(config.COMMON_BUTTONS)
 
     return options
 
