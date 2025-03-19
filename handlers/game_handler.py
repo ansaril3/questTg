@@ -30,6 +30,7 @@ def send_chapter(chat_id):
     chapter_key = state["chapter"]
     chapter = config.chapters.get(chapter_key)
     print(f"------------------------CHAPTER: {chapter_key}")
+    
     if config.PROD_MODE == 1:
         log_event(chat_id, "chapter_opened", {"chapter": chapter_key})
     
@@ -49,8 +50,36 @@ def send_chapter(chat_id):
             state["end_triggered"] = False
             break
 
-    send_buttons(chat_id)  # ⚙️ Используем новую inline версию
-         
+    # Формирование message_text
+    inventory_list = state.get("inventory", [])
+    gold = state.get("gold", 0)
+    characteristics = state.get("characteristics", {})
+    message_text = ""
+
+    # Добавляем характеристики
+    if characteristics:  # Проверяем, не пустой ли словарь характеристик
+        message_text += "📊 "
+        for char_key, char_data in characteristics.items():
+            char_name = char_data.get("name", "")
+            char_value = char_data.get("value", 0)
+            
+            # Проверяем, содержит ли name суффикс [main]
+            if "[main]" in char_name:
+                # Убираем суффикс [main] из имени
+                char_name_cleaned = char_name.replace(" [main]", "")
+                message_text += f"{char_name_cleaned}: {char_value} "
+        message_text += "\n"
+    
+    # Добавляем золото
+    if gold > 0:
+        message_text += f"💰 {gold} "
+
+    # Добавляем инвентарь
+    if inventory_list:
+        message_text += "🎒 "
+        message_text += ", ".join(inventory_list) + " "
+
+    send_buttons(chat_id, message_text)  
 
 # ✅ Action handlers
 def handle_text(chat_id, value):

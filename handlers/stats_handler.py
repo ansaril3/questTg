@@ -27,10 +27,16 @@ def show_characteristics(call):
     # ✅ Create message with characteristics
     message_text = "📊 Your characteristics:\n"
     for key, char in characteristics.items():
-        # ✅ If no name for the characteristic, display the key as a fallback
-        name = char.get('name') if char.get('name') else key
-        value = char.get('value', 0)
-        message_text += f"🔹 {name}: {value}\n"
+        # Проверяем, есть ли name и не является ли он пустым
+        name = char.get('name')
+        if name:  # Если name существует и не пустой
+            value = char.get('value', 0)
+            
+            # Убираем суффикс [main] из name, если он есть
+            if "[main]" in name:
+                name = name.replace(" [main]", "")
+            
+            message_text += f"🔹 {name}: {value}\n"
 
     #bot.send_message(chat_id, message_text, parse_mode="Markdown")
 
