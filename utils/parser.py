@@ -181,11 +181,18 @@ def parse_image_action(line):
 
 def parse_assign_action(line):
     if '=' in line:
-        parts = line.split(';', 1)  # Split by the first semicolon
-        key_value = parts[0].strip().split('=', 1)  # Split into key and value
-        key = key_value[0].strip().lower()  # Convert to lowercase
-        value = key_value[1].strip().lower() if len(key_value) > 1 else ""  # Convert to lowercase
-        name = parts[1].strip() if len(parts) > 1 else ""  # Keep comment as is
+        parts = line.split(';', 1)  # Разделяем по первой точке с запятой
+        key_value = parts[0].strip().split('=', 1)  # Разделяем на ключ и значение
+        key = key_value[0].strip().lower()  # Приводим ключ к нижнему регистру
+        value = key_value[1].strip().lower() if len(key_value) > 1 else ""  # Приводим значение к нижнему регистру
+        name = parts[1].strip() if len(parts) > 1 else ""  # Оставляем комментарий как есть
+
+        # Проверяем, есть ли параметр "main" в комментарии
+        if "main" in name.lower():
+            # Удаляем параметр "main" из комментария
+            name = name.replace("; main", "").replace("main", "").strip()
+            # Добавляем суффикс [main]
+            name += " [main]"
 
         return {
             "type": "assign",
@@ -196,8 +203,7 @@ def parse_assign_action(line):
             }
         }
     else:
-        return None  # If there's no '=', it's not an assignment
-    
+        return None  # Если нет '=', это не присваивание    
 def parse_chapter(chapter, usable_items, rest_data):
     lines = chapter.strip().split('\n')
     chapter_id = lines[0].strip(':').lower()  # Convert to lowercase
