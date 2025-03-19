@@ -17,7 +17,6 @@ def get_state(user_id):
             "inventory": [],
             "gold": 0,
             "characteristics": {},
-            "saves": deque([], maxlen=SAVES_LIMIT),
             "options": {},
             "history": deque([], maxlen=HISTORY_LIMIT)
         }
@@ -37,14 +36,13 @@ def save_state(user_id):
     # ✅ Prepare the current state for saving
     state = state_cache[user_id].copy()
     state["history"] = list(state["history"])
-    state["saves"] = list(state["saves"])
 
-    # ✅ Create a unique save name (date + chapter)
+    # ✅ Create a unique save name (date)
     save_name = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     existing_data[save_name] = state
 
     # ✅ Limit the number of saves in the file
-    if len(existing_data) > SAVES_LIMIT:
+    while len(existing_data) > SAVES_LIMIT:
         oldest_key = sorted(existing_data.keys())[0]
         del existing_data[oldest_key]
 
@@ -54,9 +52,6 @@ def save_state(user_id):
 
     print(f"✅ State saved under the name {save_name}")
 
-    # ✅ Add the save to the cache (for quick display in the game)
-    state_cache[user_id]["saves"].append({"name": save_name, "chapter": state["chapter"]})
-
 # ✅ Load the last save from the JSON file into the cache
 def load_state(user_id):
     save_file = f"{SAVES_DIR}/{user_id}.json"
@@ -65,13 +60,15 @@ def load_state(user_id):
         with open(save_file, "r", encoding="utf-8") as file:
             existing_data = json.load(file)
 
+            if not existing_data:
+                return get_state(user_id)
+
             # ✅ Load the most recent save by time
             last_key = sorted(existing_data.keys())[-1]
             state = existing_data[last_key]
 
             # ✅ Convert to deque for efficient operations
             state["history"] = deque(state.get("history", []), maxlen=HISTORY_LIMIT)
-            state["saves"] = deque(state.get("saves", []), maxlen=SAVES_LIMIT)
 
             # ✅ Load into the cache
             state_cache[user_id] = state
@@ -92,7 +89,6 @@ def load_specific_state(user_id, save_name):
             if save_name in existing_data:
                 state = existing_data[save_name]
                 state["history"] = deque(state.get("history", []), maxlen=HISTORY_LIMIT)
-                state["saves"] = deque(state.get("saves", []), maxlen=SAVES_LIMIT)
 
                 # ✅ Load into the cache
                 state_cache[user_id] = state
