@@ -132,8 +132,7 @@ class TestBotSequential(unittest.TestCase):
                 "name": "",
                 "value": -1
             }
-            },
-                "saves":[]
+            } 
             } 
             state_cache[self.chat_id] = state  # Кладем в кэш
             save_state(self.chat_id)  # Сохраняем

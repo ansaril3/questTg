@@ -17,6 +17,10 @@
             "value": "100"
         },
         {
+            "type": "inventory",
+            "value": "inv+sword"
+        },
+        {
             "type": "if",
             "value": {
                 "condition": "strength > 5 and strength < 50 and sword",
@@ -30,30 +34,6 @@
                     {
                         "type": "text",
                         "value": "Condition not met"
-                    }
-                ]
-            }
-        },
-        {
-            "type": "btn",
-            "value": {
-                "text": "➡️ Продолжить",
-                "target": "test_end"
-            }
-        },
-        {
-            "type": "xbtn",
-            "value": {
-                "text": "🔥 Secret Path",
-                "target": "test_secret",
-                "actions": [
-                    {
-                        "type": "assign",
-                        "value": {
-                            "key": "secret",
-                            "value": "1",
-                            "name": "Секрет"
-                        }
                     }
                 ]
             }
@@ -123,10 +103,16 @@
             }
         }
     ],
+    "test_game_ch": [
+        {
+            "type": "text",
+            "value": "this is game"
+        }
+    ],
     "test_instruction_ch": [
         {
             "type": "text",
-            "value": "Это игровая глава"
+            "value": "this is instruction"
         }
     ]
 }
