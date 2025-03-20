@@ -50,19 +50,22 @@ def send_chapter(chat_id):
             state["end_triggered"] = False
             break
 
-    # Формирование message_text
+    # Generate message_text
     inventory_list = state.get("inventory", [])
     gold = state.get("gold", 0)
     message_text = ""
     
-    # Добавляем золото
+    # Show gold
     if gold > 0:
         message_text += f"💰 {gold} "
 
-    # Добавляем инвентарь
+    # Show inventory
     if inventory_list:
         message_text += "🎒 "
-        message_text += ", ".join(inventory_list) + " "
+        message_text += ", ".join(inventory_list[::-1])  + " "
+
+    if len(message_text) > 30:
+        message_text = message_text[:28] + "..."
 
     send_buttons(chat_id, message_text)  
 
