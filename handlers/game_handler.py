@@ -358,7 +358,7 @@ def execute_action(chat_id, state, action):
     try:
         action_type = action["type"]
         value = action["value"]
-        print(f"🚀 Calling action: {action_type} -> {value}")
+        #print(f"🚀 Calling action: {action_type} -> {value}")
 
         if action_type == "text":
             handle_text(chat_id, value)

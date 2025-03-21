@@ -115,5 +115,4 @@ def replace_variables_in_text(state, text):
     # ✅ Substitute values into text
     processed_text = re.sub(r'#([A-Za-z0-9_]+)\$', replace_match, text, flags=re.IGNORECASE)
     
-    print(f"✅ Processed text: {processed_text}")
     return processed_text
