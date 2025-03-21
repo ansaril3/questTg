@@ -59,14 +59,6 @@ def send_chapter(chat_id):
     if gold > 0:
         message_text += f"💰 {gold} "
 
-    # Show inventory
-    if inventory_list:
-        message_text += "🎒 "
-        message_text += ", ".join(inventory_list[::-1])  + " "
-
-    if len(message_text) > 30:
-        message_text = message_text[:28] + "..."
-
     send_buttons(chat_id, message_text)  
 
 # ✅ Action handlers
