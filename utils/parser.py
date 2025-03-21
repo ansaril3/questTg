@@ -209,6 +209,7 @@ def parse_chapter(chapter, usable_items, rest_data):
     chapter_id = lines[0].strip(':').lower()  # Convert to lowercase
     actions = []
     current_text = ""  # Переменная для накопления текста из последовательных PLN
+    buttons = []  # Список для хранения информации о кнопках
 
     for line in lines[1:]:
         # Ignore empty lines
@@ -232,12 +233,36 @@ def parse_chapter(chapter, usable_items, rest_data):
                 # Добавляем текущее действие
                 actions.append(action)
 
+                # Если это кнопка, добавляем её в список кнопок
+                if action["type"] == "btn":
+                    buttons.append(action)
+
     # Добавляем оставшийся накопленный текст, если он есть
     if current_text:
         actions.append({"type": "text", "value": current_text})
 
-    return chapter_id, actions
+    # Проверяем, есть ли кнопки с текстом длиннее 60 символов
+    has_long_button = any(button["value"]["text"] and len(button["value"]["text"]) > 30 for button in buttons)
 
+    if has_long_button:
+        # Создаем текстовое описание всех кнопок
+        button_texts = []
+        for i, button in enumerate(buttons, start=1):
+            button_texts.append(f"➡️{i}: {button['value']['text']}")
+
+        # Находим индекс первой кнопки в списке actions
+        first_button_index = next((i for i, action in enumerate(actions) if action["type"] == "btn"),None)
+
+        # Если найдена хотя бы одна кнопка, вставляем текстовое описание перед ней
+        if first_button_index is not None:
+            actions.insert(first_button_index, {"type": "text", "value": "\n".join(button_texts)})
+
+        # Меняем текст кнопок на "Option_1", "Option_2" и т.д.
+        for i, button in enumerate(buttons, start=1):
+            button["value"]["text"] = f"Option {i}"
+
+    return chapter_id, actions
+    
 def parse_input_to_json(input_path):
     content = read_file(input_path)
     chapters = split_into_chapters(content)
