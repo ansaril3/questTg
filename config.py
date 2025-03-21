@@ -36,10 +36,10 @@ class Config:
 
     # Кнопки
     COMMON_BUTTONS: list = field(default_factory=lambda: [
-        "📥 Save game",
-        "📤 Load game",
         "📊 Characteristics",
         "🎒 Inventory",
+        "📥 Save game",
+        "📤 Load game",
         "📖 Instructions"
     ])
 

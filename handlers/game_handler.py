@@ -253,26 +253,23 @@ def send_buttons(chat_id, text="➡️"):
         return
     
     # ✅ Create inline keyboard layout
-    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup = types.InlineKeyboardMarkup()
 
-    # ✅ Add only real buttons (without _actions)
-    dynamic_buttons = [
-        types.InlineKeyboardButton(text=text, callback_data=text)
-        for text in state.get("options", {}).keys()
-        if not text.endswith("_actions")  # 🚀 Ignore action buttons
-    ]
+    # ✅ Add dynamic buttons (one per row)
+    for button_text in state.get("options", {}).keys():
+        if not button_text.endswith("_actions"):  # 🚀 Ignore action buttons
+            button = types.InlineKeyboardButton(text=button_text, callback_data=button_text)
+            markup.row(button)  # Добавляем каждую кнопку на отдельную строку
 
-    # ✅ Add to markup
-    for i in range(0, len(dynamic_buttons), 2):
-        markup.row(*dynamic_buttons[i:i + 2])
-
-    # ✅ Add common buttons (внизу под основными)
+    # ✅ Add common buttons (two per row)
     common_buttons = [
         types.InlineKeyboardButton(text=text, callback_data=text)
         for text in config.COMMON_BUTTONS
     ]
     for i in range(0, len(common_buttons), 2):
-        markup.row(*common_buttons[i:i + 2])
+        # Добавляем по две кнопки на строку
+        row_buttons = common_buttons[i:i + 2]
+        markup.row(*row_buttons)
 
     print(f"📌 Sending inline buttons: {list(state['options'].keys()) + config.COMMON_BUTTONS}")
 
