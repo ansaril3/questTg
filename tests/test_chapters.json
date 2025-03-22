@@ -23,7 +23,7 @@
         {
             "type": "if",
             "value": {
-                "condition": "strength > 5 and strength < 50 and sword",
+                "condition": "strength >= 5 and strength =< 50 and sword and strength = 10",
                 "actions": [
                     {
                         "type": "text",
