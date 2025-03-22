@@ -161,6 +161,10 @@ class TestBotActions(unittest.TestCase):
                 {
                     "type": "goto",
                     "value": "return"
+                },
+                {
+                    "type": "gold",
+                    "value": "40"
                 }
             ]
         }
@@ -178,6 +182,7 @@ class TestBotActions(unittest.TestCase):
             execute_action(self.chat_id, self.state, action)
             
             # ✅ Проверяем, что вернулись в test_start
+            self.assertEqual(self.state["gold"], 20)
             self.assertEqual(self.state["chapter"], "test_start", "Глава должна вернуться в test_start!")
         
         print("✅ Test passed!")
