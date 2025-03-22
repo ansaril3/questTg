@@ -144,8 +144,9 @@ def enter_instruction(call):
 def handle_back(call):
     print(f"------------------handle back instruction")
     chat_id = call.message.chat.id
-    state = get_state(chat_id)
-
+    #state = get_state(chat_id)
+    state = state_cache.get(chat_id)
+    
     if state.get("mode") == "instruction":
         # ✅ Save instruction chapter and return to the game
         # state["instruction_chapter"] = state.get("instruction_chapter")
@@ -274,7 +275,8 @@ def send_buttons(chat_id, text="➡️"):
 def handle_inline_choice(call):
     chat_id = call.message.chat.id
     message_text = call.data
-    state = get_state(chat_id)
+    state = state_cache.get(chat_id)
+    #state = get_state(chat_id)
 
     print(f"🔘 Inline button pressed: {message_text}")
 
