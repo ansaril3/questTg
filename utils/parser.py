@@ -49,11 +49,7 @@ def parse_action(line, usable_items, chapter_id, rest_data):
         return parse_inventory_action(line, usable_items, rest_data, chapter_id)
 
     elif line.lower().startswith('goto '):
-        # Возвращаем два действия: goto и end
-        return [
-            {"type": "goto", "value": line[5:].strip().lower()},  # Convert to lowercase
-            {"type": "end", "value": ""}
-        ]
+        return {"type": "goto", "value": line[5:].strip().lower()}  # Convert to lowercase
 
     elif line.lower().startswith('if '):
         return parse_if_action(line, usable_items, chapter_id, rest_data)
@@ -74,7 +70,7 @@ def parse_action(line, usable_items, chapter_id, rest_data):
     else:
         rest_data.append(f"{chapter_id}: {line}")
         return {"type": "unknown", "value": line}
-        
+    
 def parse_inventory_action(line, usable_items, rest_data, chapter_id):
     line_lower = line.lower()
     if 'золотых монет' in line_lower:
@@ -92,10 +88,7 @@ def parse_actions(actions_list, usable_items, chapter_id, rest_data):
     for action in actions_list:
         parsed_action = parse_action(action, usable_items, chapter_id, rest_data)
         if parsed_action:
-            if isinstance(parsed_action, list):
-                parsed_actions.extend(parsed_action)
-            else:
-                parsed_actions.append(parsed_action)
+            parsed_actions.append(parsed_action)
     return parsed_actions
 
 def parse_if_action(line, usable_items, chapter_id, rest_data):
@@ -226,45 +219,23 @@ def parse_chapter(chapter, usable_items, rest_data):
         # Parse action
         action = parse_action(line, usable_items, chapter_id, rest_data)
         if action:
-            # Если action является списком (например, для goto + end)
-            if isinstance(action, list):
-                for a in action:
-                    if a["type"] == "text":
-                        # Если это PLN, добавляем текст к текущему накопленному тексту
-                        if current_text:
-                            current_text += "\n" + a["value"]
-                        else:
-                            current_text = a["value"]
-                    else:
-                        # Если это не PLN, добавляем накопленный текст как один элемент
-                        if current_text:
-                            actions.append({"type": "text", "value": current_text})
-                            current_text = ""
-                        # Добавляем текущее действие
-                        actions.append(a)
-
-                        # Если это кнопка, добавляем её в список кнопок
-                        if a["type"] == "btn":
-                            buttons.append(a)
-            else:
-                # Если action является одиночным объектом
-                if action["type"] == "text":
-                    # Если это PLN, добавляем текст к текущему накопленному тексту
-                    if current_text:
-                        current_text += "\n" + action["value"]
-                    else:
-                        current_text = action["value"]
+            if action["type"] == "text":
+                # Если это PLN, добавляем текст к текущему накопленному тексту
+                if current_text:
+                    current_text += "\n" + action["value"]
                 else:
-                    # Если это не PLN, добавляем накопленный текст как один элемент
-                    if current_text:
-                        actions.append({"type": "text", "value": current_text})
-                        current_text = ""
-                    # Добавляем текущее действие
-                    actions.append(action)
+                    current_text = action["value"]
+            else:
+                # Если это не PLN, добавляем накопленный текст как один элемент
+                if current_text:
+                    actions.append({"type": "text", "value": current_text})
+                    current_text = ""
+                # Добавляем текущее действие
+                actions.append(action)
 
-                    # Если это кнопка, добавляем её в список кнопок
-                    if action["type"] == "btn":
-                        buttons.append(action)
+                # Если это кнопка, добавляем её в список кнопок
+                if action["type"] == "btn":
+                    buttons.append(action)
 
     # Добавляем оставшийся накопленный текст, если он есть
     if current_text:
@@ -280,7 +251,7 @@ def parse_chapter(chapter, usable_items, rest_data):
             button_texts.append(f"➡️{i}: {button['value']['text']}")
 
         # Находим индекс первой кнопки в списке actions
-        first_button_index = next((i for i, action in enumerate(actions) if action["type"] == "btn"), None)
+        first_button_index = next((i for i, action in enumerate(actions) if action["type"] == "btn"),None)
 
         # Если найдена хотя бы одна кнопка, вставляем текстовое описание перед ней
         if first_button_index is not None:
@@ -291,7 +262,7 @@ def parse_chapter(chapter, usable_items, rest_data):
             button["value"]["text"] = f"Option {i}"
 
     return chapter_id, actions
-   
+    
 def parse_input_to_json(input_path):
     content = read_file(input_path)
     chapters = split_into_chapters(content)
