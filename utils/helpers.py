@@ -11,6 +11,12 @@ def split_condition(condition):
 def evaluate_condition(state, condition):
     print(f"🔎 Original condition: {condition}")
     
+    condition = condition.replace("=>", ">=")
+    condition = condition.replace("=<", "<=")
+    
+    # Заменяем одиночные "=" на "==", но не трогаем составные операторы (>=, <=, ==, !=)
+    condition = re.sub(r'(?<!<|>|!)=(?!=)', '==', condition)
+    
     parts = split_condition(condition)
     evaluated_parts = []
     
@@ -22,8 +28,8 @@ def evaluate_condition(state, condition):
             # Handle comparisons via eval()
             try:
                 evaluated_part = re.sub(r'\b([A-Za-z_][A-Za-z0-9_]*)\b', 
-                                        lambda m: replace_variables_safe(m, state), 
-                                        part)
+                                       lambda m: replace_variables_safe(m, state), 
+                                       part)
                 evaluated_parts.append(f"({evaluated_part})")
             except Exception as e:
                 print(f"❌ Error while processing comparison: {e}")
@@ -48,7 +54,7 @@ def evaluate_condition(state, condition):
     except Exception as e:
         print(f"❌ Error in evaluate_condition: {e}")
         return False
-
+         
 def has_comparison_operators(condition):
     return any(op in condition for op in comparison_operators)
 
