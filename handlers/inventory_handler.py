@@ -35,7 +35,7 @@ def show_inventory(call):
             item_name = item.replace("[usable]", "").strip()
             # ✅ Добавляем кнопку "Использовать"
             state["options"][f"Use {item_name}"] = f"use_{item_name}"
-            message_text += f"🔹 {item_name} (✨ usable)\n"
+            message_text += f"🔹 {item_name} ✨\n"
             markup.add(types.InlineKeyboardButton(f"Use {item_name}", callback_data=f"use_{item_name}"))
         else:
             message_text += f"🔹 {item}\n"

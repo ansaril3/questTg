@@ -95,6 +95,7 @@ def handle_assign(state, value):
     except Exception as e:
         new_value = state["characteristics"].get(key, {"value": 0})["value"]
 
+    print(f"assign {key} -> {new_value}")
     state["characteristics"][key] = {"name": name, "value": new_value}
 
 def handle_goto(chat_id, state, value):

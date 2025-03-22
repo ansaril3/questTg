@@ -250,7 +250,7 @@ class TestBotActions(unittest.TestCase):
                 expected_message = (
                     "🎒 *Your inventory:*\n"
                     "💰 Gold: 130\n"
-                    "🔹 vial of magic potion (✨ usable)\n"
+                    "🔹 vial of magic potion ✨\n"
                 )
                 last_call = mock_send.call_args_list[-1]
                 actual_args, actual_kwargs = last_call
