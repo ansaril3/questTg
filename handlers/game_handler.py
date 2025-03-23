@@ -61,8 +61,16 @@ def send_chapter(chat_id):
     gold = state.get("gold", 0)
     message_text = f"💰 {gold} " if gold > 0 else ""
 
+    characteristics = state.get("characteristics", {})
+    for char in characteristics.values():
+        name = char.get("name", "")
+        if "[hp]" in name:
+            hp_value = char.get("value", 0)
+            message_text += f"💚 {hp_value} "
+            break 
+
     if not state.get("goto_triggered"):
-        send_buttons(chat_id, message_text) 
+        send_buttons(chat_id, message_text.strip()) 
 
     state["goto_triggered"] = False
     state["end_triggered"] = False

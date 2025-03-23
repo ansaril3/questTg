@@ -1,6 +1,7 @@
 from config import bot
 from utils.state_manager import state_cache
 import telebot.types as types
+import re
 
 @bot.callback_query_handler(func=lambda call: call.data == "📊 Characteristics")
 def show_characteristics(call):
@@ -32,9 +33,8 @@ def show_characteristics(call):
         if name:  # Если name существует и не пустой
             value = char.get('value', 0)
             
-            # Убираем суффикс [main] из name, если он есть
-            if "[main]" in name:
-                name = name.replace(" [main]", "")
+            # Убираем все префиксы и суффиксы в квадратных скобках
+            name = re.sub(r'\s*\[.*?\]\s*', '', name)
             
             message_text += f"🔹 {name}: {value}\n"
 
