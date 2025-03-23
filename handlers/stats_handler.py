@@ -26,7 +26,7 @@ def show_characteristics(call):
         return
 
     # ✅ Create message with characteristics
-    message_text = "📊 Your characteristics:\n"
+    message_text = "📊 *Your characteristics:*\n"
     for key, char in characteristics.items():
         # Проверяем, есть ли name и не является ли он пустым
         name = char.get('name')
@@ -36,7 +36,7 @@ def show_characteristics(call):
             # Убираем все префиксы и суффиксы в квадратных скобках
             name = re.sub(r'\s*\[.*?\]\s*', '', name)
             
-            message_text += f"🔹 {name}: {value}\n"
+            message_text += f"🔹 {name}: *{value}*\n"
 
     #bot.send_message(chat_id, message_text, parse_mode="Markdown")
 

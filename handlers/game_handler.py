@@ -323,7 +323,7 @@ def send_buttons(chat_id, text="➡️"):
     print(f"📌 Sending inline buttons: {list(state['options'].keys()) + config.COMMON_BUTTONS}")
 
     # ✅ Send keyboard
-    bot.send_message(chat_id, text, reply_markup=markup)
+    bot.send_message(chat_id, text, reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: True)
 @safe_handler

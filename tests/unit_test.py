@@ -218,7 +218,7 @@ class TestBotActions(unittest.TestCase):
                 show_characteristics(query)
 
                 # ✅ Check message content
-                expected_message = "📊 Your characteristics:\n🔹 Speed: 10\n"
+                expected_message = "📊 *Your characteristics:*\n🔹 Speed: *10*\n"
                 last_call = mock_send.call_args_list[-1]
                 actual_args, actual_kwargs = last_call
                 self.assertEqual(actual_args[0], self.chat_id)
