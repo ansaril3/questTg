@@ -151,10 +151,11 @@ def handle_gold(state, value):
 def handle_assign(state, value):
     key = value["key"].lower()
     new_value = value["value"]
-    name = value.get("name", key)
+    new_name = value.get("name", key)  
+    if new_name == "" and key in state["characteristics"]:
+        new_name = state["characteristics"][key].get("name", key)
 
     new_value = re.sub(r'rnd(\d+)', lambda m: str(random.randint(1, int(m.group(1)))), new_value)
-
     local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
     try:
         new_value = int(new_value) if new_value.isdigit() else eval(new_value, {}, local_vars)
@@ -162,7 +163,7 @@ def handle_assign(state, value):
         new_value = state["characteristics"].get(key, {"value": 0})["value"]
 
     print(f"assign {key} -> {new_value}")
-    state["characteristics"][key] = {"name": name, "value": new_value}
+    state["characteristics"][key] = {"name": new_name, "value": new_value}
 
 def handle_image(chat_id, value):
     image_path = config.DATA_DIR + value.replace("\\", "/")
