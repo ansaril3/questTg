@@ -21,55 +21,58 @@ def start_game(message):
 
 # ✅ Sending the chapter to the player
 def send_chapter(chat_id):
-    state = state_cache[chat_id]
+    # Получаем состояние пользователя
+    state = get_state(chat_id)
     chapter_key = state["chapter"]
     chapter = config.chapters.get(chapter_key)
 
     print(f"------------------------CHAPTER: {chapter_key}")
-    if state.get("end_triggered"):
-        state["end_triggered"] = False
-        return
+    print(f"send chapter end_triggered={state.get('end_triggered')}")
+    print(f"send chapter goto_triggered={state.get('goto_triggered')}")
+    
+    # Сбрасываем флаги
+    #state["end_triggered"] = False
+    #state["goto_triggered"] = False
+    #print(f"Flags reset: end_triggered=False, goto_triggered=False")
 
+    # Логируем открытие главы
     if config.PROD_MODE == 1:
         log_event(chat_id, "chapter_opened", {"chapter": chapter_key})
     
+    # Проверяем, существует ли глава
     if not chapter:
         bot.send_message(chat_id, "Error: Chapter not found.")
         return
 
+    # Очищаем опции
     state["options"] = {}
 
+    # Выполняем действия из главы
     for action in chapter:
         print(f"------ACTION: {str(action)[:60]}{'...' if len(str(action)) > 60 else ''}")
         
         execute_action(chat_id, state, action)
 
-        # ✅ Stop execution if 'end' is triggered
+        # Останавливаем выполнение, если сработал флаг end_triggered
         if state.get("end_triggered"):
             print(f"end triggered - stop next actions")
             break
 
-
-    # Generate message_text
     gold = state.get("gold", 0)
-    message_text = ""
-    
-    # Show gold
-    if gold > 0:
-        message_text += f"💰 {gold} "
+    message_text = f"💰 {gold} " if gold > 0 else ""
 
-    state["end_triggered"] = False
-
-    if state.get("goto_triggered") == False:
+    if not state.get("goto_triggered"):
         send_buttons(chat_id, message_text) 
-    # Сбрасываем флаг goto_triggered после завершения всех действий
+
     state["goto_triggered"] = False
+    state["end_triggered"] = False
+    save_state(chat_id)
 
 def execute_action(chat_id, state, action):
     try:
         action_type = action["type"]
         value = action["value"]
-        #print(f"🚀 Calling action: {action_type} -> {value}")
+        print(f"🚀 Executing action: {action_type} -> {value}")
         
         if action_type == "text":
             handle_text(chat_id, value)
@@ -90,8 +93,8 @@ def execute_action(chat_id, state, action):
         elif action_type == "assign":
             handle_assign(state, value)
         elif action_type == "goto":
-            state["goto_triggered"] = True
             handle_goto(chat_id, state, value)
+            state["goto_triggered"] = True
             state["end_triggered"] = True
         elif action_type == "image":
             handle_image(chat_id, value)
