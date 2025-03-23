@@ -656,7 +656,7 @@
     "11a": [
         {
             "type": "image",
-            "value": "/images/4.jpg"
+            "value": "/images/4.JPG"
         },
         {
             "type": "assign",
@@ -984,7 +984,7 @@
     "14a": [
         {
             "type": "image",
-            "value": "/Images/5.jpg"
+            "value": "/Images/5.JPG"
         },
         {
             "type": "assign",
@@ -1605,7 +1605,7 @@
     "27": [
         {
             "type": "image",
-            "value": "/Images/6.jpg"
+            "value": "/Images/6.JPG"
         },
         {
             "type": "text",
@@ -1941,7 +1941,7 @@
     "30": [
         {
             "type": "image",
-            "value": "/Images/7.jpg"
+            "value": "/Images/7.JPG"
         },
         {
             "type": "text",
@@ -2291,7 +2291,7 @@
     "40": [
         {
             "type": "image",
-            "value": "/Images/8.jpg"
+            "value": "/Images/8.JPG"
         },
         {
             "type": "text",
@@ -3153,7 +3153,7 @@
     "59": [
         {
             "type": "image",
-            "value": "/Images/10.jpg"
+            "value": "/Images/10.JPG"
         },
         {
             "type": "assign",
@@ -3833,7 +3833,7 @@
     "66a": [
         {
             "type": "image",
-            "value": "/Images/11.jpg"
+            "value": "/Images/11.JPG"
         },
         {
             "type": "assign",
@@ -11649,7 +11649,7 @@
     "196": [
         {
             "type": "image",
-            "value": "/Images/23.jpg"
+            "value": "/Images/23.JPG"
         },
         {
             "type": "inventory",
@@ -12324,7 +12324,7 @@
     "209a": [
         {
             "type": "image",
-            "value": "/Images/25.jpg"
+            "value": "/Images/25.JPG"
         },
         {
             "type": "assign",
@@ -15537,7 +15537,7 @@
     "255": [
         {
             "type": "image",
-            "value": "/Images/29.jpg"
+            "value": "/Images/29.JPG"
         },
         {
             "type": "text",
@@ -24113,7 +24113,7 @@
     "375": [
         {
             "type": "image",
-            "value": "/Images/38.jpg"
+            "value": "/Images/38.JPG"
         },
         {
             "type": "text",
@@ -25565,7 +25565,7 @@
     "398a": [
         {
             "type": "image",
-            "value": "/Images/40.jpg"
+            "value": "/Images/40.JPG"
         },
         {
             "type": "assign",
