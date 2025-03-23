@@ -27,7 +27,7 @@ bot.send_photo = MagicMock()
 
 class TestBotActions(unittest.TestCase):
     def setUp(self):
-        print(f"\n🚀🚀🚀🚀🚀🚀🚀 --------------------------Running test: {self._testMethodName}")
+        print(f"\n\n🚀🚀🚀🚀🚀🚀🚀 --------------------------Running test: {self._testMethodName}--------------------------🚀🚀🚀🚀🚀🚀🚀")
         self.chat_id = 123456789
         self.state = get_state(self.chat_id) or {
             "chapter": "test_start",
@@ -38,7 +38,6 @@ class TestBotActions(unittest.TestCase):
             "end_triggered": False,
             "characteristics": {}
         }
-        save_state(self.chat_id)
 
     def simulate_inline(self, data):
         """Simulate pressing inline button (callback_query)"""
@@ -48,7 +47,6 @@ class TestBotActions(unittest.TestCase):
         })
 
     def test_xbtn(self):
-        print("➡️ Running test_xbtn")
         with patch("handlers.game_handler.config.chapters", test_chapters):
             action = {
                 "type": "xbtn",
@@ -82,7 +80,6 @@ class TestBotActions(unittest.TestCase):
         print("✅ Test passed!")
 
     def test_end(self):
-        print("➡️ Running test_end")
         with patch("handlers.game_handler.config.chapters", test_chapters):
             # ✅ Устанавливаем главу "test_end"
             self.state["chapter"] = "test_end"
@@ -90,7 +87,7 @@ class TestBotActions(unittest.TestCase):
 
             # ✅ Вызываем send_chapter
             send_chapter(self.chat_id)
-
+            print(f"speed={self.state["characteristics"]["speed"]["value"]}")
             # ✅ Проверяем, что скорость установилась в 10 и не изменилась на 20
             self.assertEqual(self.state["characteristics"]["speed"]["value"], 10, "Скорость должна быть 10!")
 
@@ -98,7 +95,6 @@ class TestBotActions(unittest.TestCase):
 
 
     def test_btn(self):
-        print("➡️ Running test_btn")
         with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 action = {
@@ -126,7 +122,6 @@ class TestBotActions(unittest.TestCase):
         print("✅ Test passed!")
 
     def test_image(self):
-        print("➡️ Running test_image")
         with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_photo") as mock_send_photo:
                 # ✅ Устанавливаем главу "test_image"
@@ -145,7 +140,6 @@ class TestBotActions(unittest.TestCase):
         print("✅ Test passed!")
 
     def test_return_goto(self):
-        print("➡️ Running test_return")
         test_chapters = {
             "test_start": [
                 {
@@ -164,31 +158,32 @@ class TestBotActions(unittest.TestCase):
                 },
                 {
                     "type": "gold",
-                    "value": "40"
+                    "value": "50"
                 }
             ]
         }
         with patch("handlers.game_handler.config.chapters", test_chapters):
-            # ✅ Устанавливаем начальное состояние
-            self.state["chapter"] = "test_start"
-            self.state["history"].append("test_start")
-            self.assertEqual(self.state["chapter"], "test_start")
-            
-            self.state["chapter"] = "test_return"
-            self.assertEqual(self.state["chapter"], "test_return")
+            with patch("handlers.game_handler.bot.send_message") as mock_send:
+                print(f"test_chapters = {test_chapters}")
+                self.state["mode"] = "game"
+                self.state["chapter"] = "test_start"
+                self.state["history"].append("test_start")
+                send_chapter(self.chat_id)
+                self.assertEqual(self.state["chapter"], "test_start")
+                
+                self.state["chapter"] = "test_return"
+                self.assertEqual(self.state["chapter"], "test_return")
 
-            # ✅ Выполняем action главы test_return
-            action = test_chapters["test_return"][0]  # {'type': 'goto', 'value': 'return'}
-            execute_action(self.chat_id, self.state, action)
-            
-            # ✅ Проверяем, что вернулись в test_start
-            self.assertEqual(self.state["gold"], 20)
-            self.assertEqual(self.state["chapter"], "test_start", "Глава должна вернуться в test_start!")
+                # ✅ Выполняем действия главы test_return
+                send_chapter(self.chat_id)
+                
+                # ✅ Проверяем, что вернулись в test_start
+                self.assertEqual(self.state["chapter"], "test_start", "Глава должна вернуться в test_start!")
+                self.assertEqual(self.state["gold"], 20)
         
         print("✅ Test passed!")
 
     def test_gold(self):
-        print("➡️ Running test_gold")
         with patch("handlers.game_handler.config.chapters", test_chapters):
             self.state["gold"] = 0
             
@@ -200,7 +195,6 @@ class TestBotActions(unittest.TestCase):
         print("✅ Test passed!")
 
     def test_condition(self):
-        print("➡️ Running test_condition")
         with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 self.state["chapter"] = "test_start"
@@ -214,7 +208,6 @@ class TestBotActions(unittest.TestCase):
         print("✅ Test passed!")
 
     def test_assign_characteristics(self):
-        print("➡️ Running test_characteristics")
         with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 action = test_chapters["test_end"][0]
@@ -235,7 +228,6 @@ class TestBotActions(unittest.TestCase):
 
 
     def test_inventory(self):
-        print("➡️ Running test_inventory")
         with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 self.state["inventory"] = ["vial of magic potion[usable]"]
@@ -271,9 +263,6 @@ class TestBotActions(unittest.TestCase):
         print("✅ Test passed!")
 
     def test_save_and_load(self):
-        """✅ Test saving and loading game"""
-        print("➡️ Running test_save_and_load")
-
         with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
 
@@ -325,7 +314,6 @@ class TestBotActions(unittest.TestCase):
         print("✅ Test successfully passed!")
 
     def test_instruction_navigation(self):
-        print("➡️ Running test_instruction_navigation")
         with patch("handlers.game_handler.config.chapters", test_chapters):
             with patch("handlers.game_handler.bot.send_message") as mock_send:
                 # ✅ Устанавливаем главу "test_game_ch"
