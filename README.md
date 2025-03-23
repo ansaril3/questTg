@@ -5,7 +5,7 @@
 ⚙️ This is a Python implementation of [PolyQuest](https://github.com/PolyQuest/PolyQuest.github.io) which is based on [URQW](https://github.com/urqw/UrqW) language.  
 ✅ Demo - [Telegram Quest Bot](https://t.me/QuestStroryBot)
 
-<img width="474" alt="image" src="https://github.com/user-attachments/assets/c60cdc50-a603-4ad9-a1f0-806fbc82176d" />
+<img width="461" alt="image" src="https://github.com/user-attachments/assets/35e8dd0e-90a9-4354-88a3-87a4aa460eb7" />
 
 
 ---
