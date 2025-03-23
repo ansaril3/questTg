@@ -18,7 +18,9 @@ def get_state(user_id):
             "gold": 0,
             "characteristics": {},
             "options": {},
-            "history": deque([], maxlen=config.HISTORY_LIMIT)
+            "history": deque([], maxlen=config.HISTORY_LIMIT),
+            "end_triggered": False,
+            "goto_triggered": False
         }
     return state_cache[user_id]
 

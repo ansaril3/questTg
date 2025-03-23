@@ -49,7 +49,7 @@ def evaluate_condition(state, condition):
         local_vars = {k: v["value"] for k, v in state["characteristics"].items()}
         local_vars["state"] = state
         result = eval(final_condition, {}, local_vars)
-        print(f"✅ Result of eval(): {result}")
+        print(f"Result of eval(): {result}")
         return result
     except Exception as e:
         print(f"❌ Error in evaluate_condition: {e}")
@@ -72,11 +72,11 @@ def replace_variables(var_name, state):
     var_name_lower = var_name.lower()
     if var_name_lower in state["characteristics"]:
         value = state["characteristics"][var_name_lower].get("value", 0)
-        print(f"✅ Substituting from characteristics: {var_name} = {value}")
+        print(f"Substituting from characteristics: {var_name} = {value}")
         return str(value)
 
     if var_name_lower in [item.lower() for item in state["inventory"]]:
-        print(f"✅ Substituting from inventory: {var_name} = True")
+        print(f"Substituting from inventory: {var_name} = True")
         return "True"
 
     print(f"⚠️ Variable {var_name} not found")
@@ -112,7 +112,7 @@ def replace_variables_in_text(state, text):
         if key in state["characteristics"]:
             value = state["characteristics"].get(key, {}).get("value")
             if value is not None:
-                print(f"✅ Substituting value {key} → {value}")
+                print(f"Substituting value {key} → {value}")
                 return str(value)
             else:
                 print(f"⚠️ Value for {key} is missing")

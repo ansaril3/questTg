@@ -22,15 +22,14 @@ def start_game(message):
 # ✅ Sending the chapter to the player
 def send_chapter(chat_id):
     state = state_cache[chat_id]
+    chapter_key = state["chapter"]
+    chapter = config.chapters.get(chapter_key)
 
+    print(f"------------------------CHAPTER: {chapter_key}")
     if state.get("end_triggered"):
         state["end_triggered"] = False
         return
-    
-    chapter_key = state["chapter"]
-    chapter = config.chapters.get(chapter_key)
-    print(f"------------------------CHAPTER: {chapter_key}")
-    
+
     if config.PROD_MODE == 1:
         log_event(chat_id, "chapter_opened", {"chapter": chapter_key})
     
@@ -47,11 +46,11 @@ def send_chapter(chat_id):
 
         # ✅ Stop execution if 'end' is triggered
         if state.get("end_triggered"):
-            state["end_triggered"] = False
+            print(f"end triggered - stop next actions")
             break
 
+
     # Generate message_text
-    inventory_list = state.get("inventory", [])
     gold = state.get("gold", 0)
     message_text = ""
     
@@ -59,7 +58,63 @@ def send_chapter(chat_id):
     if gold > 0:
         message_text += f"💰 {gold} "
 
-    send_buttons(chat_id, message_text)  
+    state["end_triggered"] = False
+
+    if state.get("goto_triggered") == False:
+        send_buttons(chat_id, message_text) 
+    # Сбрасываем флаг goto_triggered после завершения всех действий
+    state["goto_triggered"] = False
+
+def execute_action(chat_id, state, action):
+    try:
+        action_type = action["type"]
+        value = action["value"]
+        #print(f"🚀 Calling action: {action_type} -> {value}")
+        
+        if action_type == "text":
+            handle_text(chat_id, value)
+        elif action_type == "btn" or action_type == "xbtn":
+            # ✅ Remove previous related buttons with the same actions
+            state["options"].pop(value["text"], None)
+            state["options"].pop(f"{value['text']}_actions", None)
+
+            # ✅ Add new button
+            state["options"][value["text"]] = value["target"]
+            if "actions" in value:
+                state["options"][f"{value['text']}_actions"] = value["actions"]
+            print(f"🔘 Added button: {value['text']} -> {value['target']}")
+        elif action_type == "inventory":
+            handle_inventory(state, value)
+        elif action_type == "gold":
+            handle_gold(state, value)
+        elif action_type == "assign":
+            handle_assign(state, value)
+        elif action_type == "goto":
+            state["goto_triggered"] = True
+            handle_goto(chat_id, state, value)
+            state["end_triggered"] = True
+        elif action_type == "image":
+            handle_image(chat_id, value)
+        elif action_type == "if":
+            handle_if(chat_id, state, value)
+        elif action_type == "end":
+            state["end_triggered"] = True
+    except Exception as e:
+        print(f"❌ Error executing action {action}: {e}")
+        bot.send_message(chat_id, "⚠️ An error occurred while executing the action. The game continues.")
+
+
+def handle_goto(chat_id, state, value):
+    if value == "return":
+        if state["history"]:
+            state["chapter"] = state["history"].pop()
+            send_chapter(chat_id)
+        return
+    
+    if value in config.chapters:
+        state["history"].append(state["chapter"])
+        state["chapter"] = value
+        send_chapter(chat_id)
 
 # ✅ Action handlers
 def handle_text(chat_id, value):
@@ -97,18 +152,6 @@ def handle_assign(state, value):
 
     print(f"assign {key} -> {new_value}")
     state["characteristics"][key] = {"name": name, "value": new_value}
-
-def handle_goto(chat_id, state, value):
-    if value == "return":
-        if state["history"]:
-            state["chapter"] = state["history"].pop()
-            send_chapter(chat_id)
-        return
-    
-    if value in config.chapters:
-        state["history"].append(state["chapter"])
-        state["chapter"] = value
-        send_chapter(chat_id)
 
 def handle_image(chat_id, value):
     image_path = config.DATA_DIR + value.replace("\\", "/")
@@ -344,43 +387,6 @@ def handle_inline_choice(call):
 
     bot.send_message(chat_id, "⚠️ Invalid choice. Try again.")
 
-
-# ✅ Simplify action handling
-def execute_action(chat_id, state, action):
-    try:
-        action_type = action["type"]
-        value = action["value"]
-        #print(f"🚀 Calling action: {action_type} -> {value}")
-
-        if action_type == "text":
-            handle_text(chat_id, value)
-        elif action_type == "btn" or action_type == "xbtn":
-            # ✅ Remove previous related buttons with the same actions
-            state["options"].pop(value["text"], None)
-            state["options"].pop(f"{value['text']}_actions", None)
-
-            # ✅ Add new button
-            state["options"][value["text"]] = value["target"]
-            if "actions" in value:
-                state["options"][f"{value['text']}_actions"] = value["actions"]
-            print(f"✅ Added button: {value['text']} -> {value['target']}")
-        elif action_type == "inventory":
-            handle_inventory(state, value)
-        elif action_type == "gold":
-            handle_gold(state, value)
-        elif action_type == "assign":
-            handle_assign(state, value)
-        elif action_type == "goto":
-            handle_goto(chat_id, state, value)
-        elif action_type == "image":
-            handle_image(chat_id, value)
-        elif action_type == "if":
-            handle_if(chat_id, state, value)
-        elif action_type == "end":
-            state["end_triggered"] = True
-    except Exception as e:
-        print(f"❌ Error executing action {action}: {e}")
-        bot.send_message(chat_id, "⚠️ An error occurred while executing the action. The game continues.")
 
 # ✅ Simplify getting all button options
 def get_all_options(chat_id):
