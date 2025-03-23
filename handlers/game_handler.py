@@ -74,7 +74,8 @@ def send_chapter(chat_id):
 
     state["goto_triggered"] = False
     state["end_triggered"] = False
-    save_state(chat_id)
+    #save_state(chat_id)
+    state_cache[chat_id] = state
 
 def execute_action(chat_id, state, action):
     try:

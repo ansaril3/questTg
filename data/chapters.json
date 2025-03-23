@@ -10065,7 +10065,7 @@
             "type": "btn",
             "value": {
                 "text": "Конец игры!",
-                "target": "game_over"
+                "target": "game_over1"
             }
         }
     ],
@@ -10859,7 +10859,7 @@
             "type": "btn",
             "value": {
                 "text": "Игра окончена!",
-                "target": "game_over"
+                "target": "game_over1"
             }
         }
     ],
