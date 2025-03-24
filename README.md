@@ -2,6 +2,7 @@
 # QuestTG — Telegram Interactive Fiction Bot (Text Quests)
 
 **QuestTG** is a Telegram bot for interactive text-based quests.  
+
 ⚙️ This is a Python implementation of [PolyQuest](https://github.com/PolyQuest/PolyQuest.github.io) which is based on [URQW](https://github.com/urqw/UrqW) language.  
 ✅ Demo - [Telegram Quest Bot](https://t.me/QuestStroryBot)
 
@@ -216,4 +217,5 @@ MIT License
 
 ---
 Contact: ansaril3g@gmail.com  
+Join in Telegram - https://t.me/tg_quest  
 **Feel free to contribute or raise issues!**
