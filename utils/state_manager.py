@@ -11,17 +11,22 @@ state_cache = {}
 def get_state(user_id):
     if user_id not in state_cache:
         # print(f"⚠️ State for user {user_id} not found — creating a new state.")
-        state_cache[user_id] = {
-            "chapter": config.first_chapter,
-            "instruction": None,
-            "inventory": [],
-            "gold": 0,
-            "characteristics": {},
-            "options": {},
-            "history": deque([], maxlen=config.HISTORY_LIMIT),
-            "end_triggered": False,
-            "goto_triggered": False
-        }
+        reset_state(user_id)
+    return state_cache[user_id]
+
+def reset_state(user_id):
+    """Полностью сбрасывает состояние пользователя к начальному"""
+    state_cache[user_id] = {
+        "chapter": config.first_chapter,
+        "instruction": None,
+        "inventory": [],
+        "gold": 0,
+        "characteristics": {},
+        "options": {},
+        "history": deque([], maxlen=config.HISTORY_LIMIT),
+        "end_triggered": False,
+        "goto_triggered": False
+    }
     return state_cache[user_id]
 
 # ✅ Save the current state to a shared JSON file (by save name)

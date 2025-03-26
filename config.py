@@ -22,7 +22,7 @@ class Config:
     PRICE: str = "9900"
 
     # Режим работы (0 — тестовый, 1 — продакшн)
-    PROD_MODE: int = 1
+    PROD_MODE: int = int(os.getenv("PROD_MODE", "1"))
 
     # Пути к файлам и директориям
     CHAPTERS_FILE: str = "data/chapters.json"

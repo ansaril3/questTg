@@ -1,5 +1,5 @@
 from config import config, bot
-from utils.state_manager import load_specific_state, save_state, get_state, state_cache  
+from utils.state_manager import load_specific_state, save_state, get_state, reset_state, state_cache  
 from utils.helpers import process_inventory_action, replace_variables_in_text, evaluate_condition
 from handlers.instruction_handler import send_instruction, handle_instruction_action
 import telebot.types as types
@@ -30,10 +30,9 @@ def send_chapter(chat_id):
     print(f"send chapter end_triggered={state.get('end_triggered')}")
     print(f"send chapter goto_triggered={state.get('goto_triggered')}")
     
-    # Сбрасываем флаги
-    #state["end_triggered"] = False
-    #state["goto_triggered"] = False
-    #print(f"Flags reset: end_triggered=False, goto_triggered=False")
+    if chapter_key == config.first_chapter:
+        print("⚠️ First chapter detected - resetting state")
+        state = reset_state(chat_id)
 
     # Логируем открытие главы
     if config.PROD_MODE == 1:
